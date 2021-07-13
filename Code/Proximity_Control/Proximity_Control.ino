@@ -28,6 +28,3 @@ void loop() {
      Serial.print(dist);
      Serial.println("m");                                             
    }
-
-
-
