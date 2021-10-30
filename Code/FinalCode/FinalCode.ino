@@ -50,6 +50,8 @@ const byte Once = 3;
  float CurrentTemperature;
  bool Fahrenheit = true;  // true for Farenheit and false for celcius
  bool bHoldButtonFlag = false;  // used to prevent holdButton also activating clickButton
+ 
+ AlarmTime PreviousFeedTime; 
 
  byte cpIndex = 0;  // Cursor Position Index 
  
@@ -675,7 +677,7 @@ void ButtonHold(Button& b) {
                 cpIndex = 0;
                 buttonHoldPrevTime = millis();
                 bHoldButtonFlag = true;
-                displayAlarm(1, true);
+                displayFeedTime(1, true);
                 //Switch to edit mode
                 break;
             case Rt_Pin:
@@ -686,35 +688,31 @@ void ButtonHold(Button& b) {
             break;
         case ShowAlarm2:
             switch (b.pinValue()) {
-            case Snooze_Pin:
+            case CtrlPin:
                 break;
             case Lt_Pin:
                 break;
             case Rt_Pin:
-                //Edit Alarm2
                 ClockState = EditAlarm2;
                 cpIndex = 0;
                 buttonHoldPrevTime = millis();
                 bHoldButtonFlag = true;
-                displayAlarm(2, true);
+                displayFeedTime(2, true);
                 break;
             default:
                 break;
             }
             break;
-        case Alarm:
-            //Alarm Mode
+        case Feeding:
             switch (b.pinValue()) {
-            case Snooze_Pin:
-                Snooze();             //Snooze alarm for 9 minutes
-                ClockState = ShowClock;
+            case CtrlPin:
+                FeederState = ShowClock;
                 buttonHoldPrevTime = millis();
                 bHoldButtonFlag = true;
                 displayClock(true);
                 break;
             case Lt_Pin:
             case Rt_Pin:
-                //turn off alarms
                 clearAlarms();
                 ClockState = ShowClock;
                 buttonHoldPrevTime = millis();
@@ -777,5 +775,200 @@ void ButtonHold(Button& b) {
             //todo
             break;
         }
+    }
+}
+
+
+void displayFeedTime(byte index, bool changeFlag) {                                       
+    AlarmTime feed;            //create AlarmTime struct from Library
+
+    if (index == FeedTime2) {
+        alarm = Clock.readAlarm(FeedTime2);      // get the latest FeedTime2 values
+    }
+    else {
+        alarm = Clock.readAlarm(FeedTime1);      // get the latest alarm1 values
+    }
+
+    // Check for Alarm change
+    if (feed.Hour != PreviousFeedTime.Hour) { changeFlag = true; }
+    if (feed.Minute != PreviousFeedTime.Minute) { changeFlag = true; }
+    if (feed.ClockMode != PreviousFeedTime.ClockMode) { changeFlag = true; }
+    if (feed.AlarmMode != PreviousFeedTime.AlarmMode) { changeFlag = true; }
+
+    //Update Display - Only change display if change is detected
+    if (changeFlag == true) {
+      
+      lcd.init();  
+      lcd.clear();
+      lcd.backlight();
+
+        // First row
+        lcd.setCursor(0, 0);
+        if (index == FeedTime2) {
+            lcd.print("Alarm 2");
+        }
+        else {
+            lcd.print("Alarm 1");
+        }
+        lcd.setCursor(13, 0);
+        if (feed.Enabled == true) {
+            lcd.print("ON");
+        }
+        else {
+            lcd.print("OFF");
+        }
+
+        //Second row
+        lcd.setCursor(0, 1);
+        lcd.print(p2Digits(feed.Hour));
+        lcd.print(":");
+        lcd.print(p2Digits(feed.Minute));
+        switch (feed.ClockMode) {
+        case AMhr:
+            //AM
+            lcd.print(" AM");
+            break;
+        case PMhr:
+            //PM
+            lcd.print(" PM");
+            break;
+        case M24hr:
+            //24hr
+            lcd.print("  H");
+            break;
+        default:
+            lcd.print("  H");
+            break;
+        }
+        switch (feed.AlarmMode) {
+            //0=Daily, 1=Weekday, 2=Weekend, 3=Once
+        case 0:
+            lcd.print(" Daily");
+            break;
+        case 1:
+            lcd.print(" Weekday");
+            break;
+        case 2:
+            lcd.print(" Weekend");
+            break;
+        case 3:
+            lcd.print(" Once");
+            break;
+        default:
+            break;
+        }
+        PreviousFeedTime = feed;
+    }
+}
+
+
+String p2Digits(int numValue) {
+    // utility function for digital clock display
+    // converts int to two digit char array
+    String str;
+
+    if (numValue < 10) {
+        str = "0" + String(numValue);
+    }
+    else {
+        str = String(numValue);
+    }
+    return str;
+}
+
+
+void displayClock(bool changeFlag = false) {
+    /* ***************************************************** *
+     *   changeFlag - true forces display refresh
+     *              - false does nothing
+     * ***************************************************** */
+    DateTime NowTime;            //create DateTime struct from Library
+    NowTime = Clock.read();      // get the latest clock values
+
+    // CheckFlag Section:
+    // Check the temperature every 65 seconds OR
+    // Check the temperature if Fahrenheit changes
+    unsigned long uL = millis() - RunTime;
+    if ((uL >= 65000) || (Fahrenheit != PrevFahrenheit)) {
+        float PreviousTemperature = CurrentTemperature;
+        CurrentTemperature = getTemperatureValue();
+        RunTime = millis();
+        PrevFahrenheit = Fahrenheit;
+        if (CurrentTemperature != PreviousTemperature) { changeFlag = true; }
+    }
+
+    // Check for Time change
+    if (NowTime.Hour != PreviousTime.Hour) { changeFlag = true; }
+    if (NowTime.Minute != PreviousTime.Minute) { changeFlag = true; }
+    if (NowTime.ClockMode != PreviousTime.ClockMode) { changeFlag = true; }
+
+    //Update Display - Only change display if change is detected
+    if (changeFlag == true) {
+      lcd.init();  
+      lcd.clear();
+      lcd.backlight();
+
+        //First Row  hh:mm AM ###.#°F
+        lcd.setCursor(0, 0);                       //Column, Row
+        lcd.print(p2Digits(NowTime.Hour));
+        lcd.print(":");
+        lcd.print(p2Digits(NowTime.Minute));
+        switch (NowTime.ClockMode) {
+        case AMhr:
+            lcd.print(" AM ");
+            break;
+        case PMhr:
+            lcd.print(" PM ");
+            break;
+        case M24hr:
+            lcd.print("  M ");
+            break;
+        default:
+            break;
+        }
+        if (CurrentTemperature < 100.0) { lcd.print(" "); }
+        lcd.print(String(CurrentTemperature, 1));  // converts float to string
+                                                  // with 1 decimal place
+        lcd.print((char)223);                     // prints the degree symbol
+        if (Fahrenheit) { lcd.print("F"); }
+        else { lcd.print("C"); }
+
+        //Second Row  dow mm/dd/yyyy
+        lcd.setCursor(0, 1);                       // Column, Row
+        lcd.print("Nxt Feed ");          // amount of food remaining in the container
+                                                  
+        lcd.write(4);                             //Skinny letter F
+        lcdAlarmIndicator();                      //lcd.print A1, A2, BA, or -
+
+        PreviousTime = Clock.read();
+    }
+}
+
+
+void lcdAlarmIndicator() {
+    byte alarmEnabledStatus;
+
+    alarmEnabledStatus = Clock.alarmStatus();
+    /* Returns:
+       0 - No alarms
+       1 - Alarm 1 enabled
+       2 - Alarm 2 enabled
+       3 - Both alarms enabled
+     */
+    switch (alarmEnabledStatus) {
+    case 0:
+        lcd.print("-");
+        break;
+    case 1:
+        lcd.write(1); //up
+        break;
+    case 2:
+        lcd.write(2); //down
+        break;
+    case 3:
+        lcd.write(3); //both
+        break;
+    default:
+        break;
     }
 }
