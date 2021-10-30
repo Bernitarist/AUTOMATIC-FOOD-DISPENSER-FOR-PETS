@@ -11,7 +11,7 @@
                                       *************/
  const int redLedPin = 13; 
  const int greenLedPin = 7;
- const int buzzerPin = 12;
+ const int buzzerPin = 6;
 
  const byte RTC_addr = 0x68;      // I2C address of DS3231 RTC
  const byte EEPROM_addr = 0x57;  // I2C address of AT24C32N EEPROM
@@ -24,10 +24,15 @@
  const int Lt_Pin = 9;
  const int Rt_Pin = 10;
  const int DebouceTime = 30;  // button debouce time in ms
+ 
  Button CtrlKey(CtrlPin, BUTTON_PULLUP_INTERNAL, true, DebouceTime);  //button pin, button mode, debounce mode(bool), debounce time
  Button LtKey(Lt_Pin, BUTTON_PULLUP_INTERNAL, true, DebouceTime);
  Button RtKey(Rt_Pin, BUTTON_PULLUP_INTERNAL, true, DebouceTime);
+ 
  unsigned long buttonHoldPrevTime = 0.0;  // Used to track button hold times 
+ const int Button_Hold_Time = 3000;      // button hold length of time in ms
+ const int flashInterval = 1000;         // Alarm flashing interval
+ const int Alarm_View_Pause = 2500;      // View FeedTime Length of time in ms
 
 const byte clock0 = 0;
 const byte FeedTime1 = 1;  //all clock Modes
@@ -52,8 +57,13 @@ const byte Once = 3;
  bool bHoldButtonFlag = false;  // used to prevent holdButton also activating clickButton
  
  AlarmTime PreviousFeedTime; 
-
+bool bDisplayStatus = true;       // used to track the lcd display ON status
  byte cpIndex = 0;  // Cursor Position Index 
+
+ int melody[] = { 
+    NOTE_C6, NOTE_C6, NOTE_C6, NOTE_C6, NOTE_C6,  //notes to determine pitch of buzzer sound
+};
+int noteDurations[] = { 16, 16, 16, 16, 16 };  // note durations: 4 = quarter note, 8 = eighth note, etc.:
  
  enum States {
     PowerLoss,
@@ -143,14 +153,102 @@ void setup() {
     CtrlKey.clickHandler(ButtonClick);
     CtrlKey.holdHandler(ButtonHold, Button_Hold_Time);
 
-    //Display the clock
-    //displayClock(true);
+    displayClock(true);
 
 }
 
 
 void loop() {
-  
+  static long previousMillis = 0;
+
+    switch (FeederState) {
+    case PowerLoss:
+        displayClock();
+        digitalWrite(greenLedPin, LOW);
+        
+        //Flash Clock
+        if ((millis() - previousMillis) >= flashInterval) {
+            previousMillis = millis();
+            if (bDisplayStatus == true) {
+                lcd.noDisplay();
+            }
+            else {
+                lcd.display();
+            }
+            bDisplayStatus = !bDisplayStatus;
+        }
+        break;
+    case ShowClock:
+        displayClock();
+        digitalWrite(greenLedPin, HIGH);
+        break;
+
+        //for both, AlarmRunTime is defined by showFeedTime
+    case ShowFeedTime1:
+        if ((millis() - AlarmRunTime) <= Alarm_View_Pause) {
+            displayFeedTime(FeedTime1);
+        }
+        else {
+            ClockState = ShowClock;
+            digitalWrite(greenLedPin, HIGH);
+            displayClock(true);
+        }
+        break;
+    case ShowFeedTime2:
+        if ((millis() - AlarmRunTime) <= Alarm_View_Pause) {
+            displayFeedTime(FeedTime2);
+        }
+        else {
+            ClockState = ShowClock;
+            digitalWrite(greenLedPin, HIGH);
+            displayClock(true);
+        }
+        break;
+    case Feeding:
+        displayClock();
+        digitalWrite(greenLedPin, LOW);
+        
+        //Flash Clock
+        if ((millis() - previousMillis) >= flashInterval) {
+            previousMillis = millis();
+            if (bDisplayStatus == true) {
+                lcd.noDisplay();
+            }
+            else {
+                lcd.display();
+            }
+            bDisplayStatus = !bDisplayStatus;
+            toggleLEDred();
+            toggleBuzzer();
+        }
+        break;
+    case EditClock:
+        //Edit ClockMode
+        if (ClockState != PrevState) { Serial.println("ClockState = EditClock"); PrevState = ClockState; }
+        editClock(cpIndex);
+        displayClock();
+        break;
+    case EditAlarm1:
+        //Edit Alarm1
+        if (ClockState != PrevState) { Serial.println("ClockState = EditAlarm1"); PrevState = ClockState; }
+        editAlarm(cpIndex);
+        displayAlarm(alarm1);
+        break;
+    case EditAlarm2:
+        //Edit Alarm2
+        if (ClockState != PrevState) { Serial.println("ClockState = EditAlarm2"); PrevState = ClockState; }
+        editAlarm(cpIndex);
+        displayAlarm(alarm2);
+        break;
+    default:
+        Serial.println("ClockState = default!!");
+        displayClock();
+        break;
+    }
+    LtKey.process();
+    RtKey.process();
+    SnoozeKey.process();
+    ActiveAlarms = CheckAlarmStatus();  //Returns which alarms are activ
 
 }
 
@@ -726,7 +824,7 @@ void ButtonHold(Button& b) {
             break;
         case EditClock:  //Edit Clock
             switch (b.pinValue()) {
-            case Snooze_Pin:
+            case CtrlPin:
                 lcd.noBlink();
                 lcd.noCursor();
                 ClockState = ShowClock;
@@ -739,9 +837,9 @@ void ButtonHold(Button& b) {
                 break;
             }
             break;
-        case EditAlarm1:  //Edit Alarm1
+        case EditFeedTime1: 
             switch (b.pinValue()) {
-            case Snooze_Pin:
+            case CtrlPin:
                 lcd.noBlink();
                 lcd.noCursor();
                 ClockState = ShowClock;
@@ -755,9 +853,9 @@ void ButtonHold(Button& b) {
                 break;
             }
             break;
-        case EditAlarm2:  //Edit Alarm1
+        case EditFeedTime2: 
             switch (b.pinValue()) {
-            case Snooze_Pin:
+            case CtrlPin:
                 lcd.noBlink();
                 lcd.noCursor();
                 ClockState = ShowClock;
@@ -936,7 +1034,8 @@ void displayClock(bool changeFlag = false) {
         //Second Row  dow mm/dd/yyyy
         lcd.setCursor(0, 1);                       // Column, Row
         lcd.print("Nxt Feed ");          // amount of food remaining in the container
-                                                  
+
+         displayNextFeed();                                         
         lcd.write(4);                             //Skinny letter F
         lcdAlarmIndicator();                      //lcd.print A1, A2, BA, or -
 
@@ -970,5 +1069,36 @@ void lcdAlarmIndicator() {
         break;
     default:
         break;
+    }
+}
+
+
+void toggleLEDred(bool ledON = true) {
+    bool ledState;
+
+    ledState = digitalRead(redLedPin);                //get the state of LED
+    if (ledON == true) {
+        digitalWrite(redLedPin, !ledState);           //do the opposite
+    }
+    else {
+        digitalWrite(redLedPin, LOW);
+    }
+}
+
+
+void toggleBuzzer() {
+    if(dist < 4.5) {
+      
+        // to calculate the note duration, take one second divided by the note type.
+        // e.g. quarter note = 1000 / 4, eighth note = 1000/8, etc.
+        int noteDuration = 1000 / noteDurations[thisNote];
+        tone(buzzerPin, melody[thisNote], noteDuration);
+
+        int pauseBetweenNotes = noteDuration * 1.30;  //to distinguish the notes, set a minimum time between them. the note's duration + 30% seems to work well:
+        delay(pauseBetweenNotes);              
+    }
+
+    else{
+      noTone(BUZZER_Pin);  // stop the tone playing:
     }
 }
