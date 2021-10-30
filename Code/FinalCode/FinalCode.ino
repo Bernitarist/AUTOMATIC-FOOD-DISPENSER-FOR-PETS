@@ -4,6 +4,7 @@
 #include <LiquidCrystal_I2C.h>
 #include <SimpleAlarmClock.h>
 #include <Button.h> 
+#include "pitches.h"
 
 
                                       /************
@@ -12,6 +13,7 @@
  const int redLedPin = 13; 
  const int greenLedPin = 7;
  const int buzzerPin = 6;
+ const int SQW_Pin = 2;
 
  const byte RTC_addr = 0x68;      // I2C address of DS3231 RTC
  const byte EEPROM_addr = 0x57;  // I2C address of AT24C32N EEPROM
@@ -54,11 +56,14 @@ const byte Once = 3;
  unsigned long AlarmRunTime;
  float CurrentTemperature;
  bool Fahrenheit = true;  // true for Farenheit and false for celcius
+ bool PrevFahrenheit = Fahrenheit;  // Capture previous Fahrenheit
  bool bHoldButtonFlag = false;  // used to prevent holdButton also activating clickButton
  
- AlarmTime PreviousFeedTime; 
-bool bDisplayStatus = true;       // used to track the lcd display ON status
+ AlarmTime PreviousFeedTime;
+ DateTime PreviousTime;  
+ bool bDisplayStatus = true;  // used to track the lcd display ON status
  byte cpIndex = 0;  // Cursor Position Index 
+ byte ActiveFeedTimes = 0;  // used to store active alarms (not enabled alarms)
 
  int melody[] = { 
     NOTE_C6, NOTE_C6, NOTE_C6, NOTE_C6, NOTE_C6,  //notes to determine pitch of buzzer sound
@@ -114,6 +119,35 @@ byte FeedLetter[8] = {
               0b00100,
               0b00100,
               0b00100 };
+
+
+                                      /*********************
+                                      * FUNCTION PROTOTYPES
+                                      **********************/
+void displayClock(bool changeFlag = false);
+float getTemperatureValue();
+void ButtonClick(Button& b);
+void showFeedTime(byte i);
+void clearAlarms();
+void changeHour(byte i, bool increment);
+void changeMinute(byte i, bool increment);
+void changeClockMode(byte i, bool increment);
+void changeTemp();
+void changeAmtOfFood(bool increment);
+void changeAlarmMode(byte i, bool increment);
+void ButtonHold(Button& b);
+void displayFeedTime(byte index = 1, bool changeFlag = false);
+String p2Digits(int numValue);
+void displayClock(bool changeFlag = false);
+void lcdAlarmIndicator();
+void toggleLEDred(bool ledON = true);
+void toggleBuzzer();
+void editClock(byte i);
+void editFeedTime(byte i);
+byte CheckFeedTimeStatus();
+void fixFeedTimeClockMode(byte FeedTimeIndex, byte NewClockMode);
+void displayNextFeed();
+void showAmtOfFood();
 
 
 void setup() {       
@@ -189,7 +223,7 @@ void loop() {
             displayFeedTime(FeedTime1);
         }
         else {
-            ClockState = ShowClock;
+            FeederState = ShowClock;
             digitalWrite(greenLedPin, HIGH);
             displayClock(true);
         }
@@ -199,7 +233,7 @@ void loop() {
             displayFeedTime(FeedTime2);
         }
         else {
-            ClockState = ShowClock;
+            FeederState = ShowClock;
             digitalWrite(greenLedPin, HIGH);
             displayClock(true);
         }
@@ -222,33 +256,29 @@ void loop() {
             toggleBuzzer();
         }
         break;
+        
     case EditClock:
-        //Edit ClockMode
-        if (ClockState != PrevState) { Serial.println("ClockState = EditClock"); PrevState = ClockState; }
+        digitalWrite(greenLedPin, LOW);
         editClock(cpIndex);
-        displayClock();
+        displayClock();       
         break;
-    case EditAlarm1:
-        //Edit Alarm1
-        if (ClockState != PrevState) { Serial.println("ClockState = EditAlarm1"); PrevState = ClockState; }
-        editAlarm(cpIndex);
-        displayAlarm(alarm1);
+        
+    case EditFeedTime1:
+        editFeedTime(cpIndex);
+        displayFeedTime(FeedTime1);
         break;
-    case EditAlarm2:
-        //Edit Alarm2
-        if (ClockState != PrevState) { Serial.println("ClockState = EditAlarm2"); PrevState = ClockState; }
-        editAlarm(cpIndex);
-        displayAlarm(alarm2);
+    case EditFeedTime2:
+        editFeedTime(cpIndex);
+        displayFeedTime(FeedTime2);
         break;
     default:
-        Serial.println("ClockState = default!!");
         displayClock();
         break;
     }
     LtKey.process();
     RtKey.process();
-    SnoozeKey.process();
-    ActiveAlarms = CheckAlarmStatus();  //Returns which alarms are activ
+    CtrlKey.process();
+    ActiveFeedTimes = CheckFeedTimeStatus();  //Returns which FeedTime are active
 
 }
 
@@ -292,7 +322,7 @@ void ButtonClick(Button& b) {
                 break;
             }
             break;
-            //ShowAlarm1 or ShowAlarm2 does nothing
+            //ShowAlarm1 or ShowFeedTime2 does nothing
         case Feeding:
             switch (b.pinValue()) {
             case CtrlPin:
@@ -509,7 +539,7 @@ void showFeedTime(byte i) {
 
 void clearAlarms() {  
     Clock.clearAlarms();  //Clear alarm flags
-    toggleLED(false);
+    toggleLEDred(false);
     lcd.display();  // Just in case it was off
 }
 
@@ -666,8 +696,8 @@ void changeClockMode(byte i, bool increment) {
         if (ClockMode < 0) { ClockMode = 2; }
         NowTime.ClockMode = byte(ClockMode);
         Clock.write(NowTime);
-        fixAlarmClockMode(FeedTime1, NowTime.ClockMode);
-        fixAlarmClockMode(FeedTime2, NowTime.ClockMode);
+        fixFeedTimeClockMode(FeedTime1, NowTime.ClockMode);
+        fixFeedTimeClockMode(FeedTime2, NowTime.ClockMode);
         break;
     case FeedTime1:
     case FeedTime2:
@@ -702,7 +732,7 @@ void changeAmtOfFood(bool increment) {
       if(increment == true){
           weight += 0.5;
         }
-      else {weight -= 0.5}
+      else {weight -= 0.5;}
 }
 
 
@@ -756,7 +786,7 @@ void ButtonHold(Button& b) {
                 displayFeedTime(1, true);
                 break;
             case Rt_Pin:
-                ClockState = EditFeedTime2;
+                FeederState = EditFeedTime2;
                 cpIndex = 0;
                 buttonHoldPrevTime = millis();
                 bHoldButtonFlag = true;
@@ -784,14 +814,14 @@ void ButtonHold(Button& b) {
                 break;
             }
             break;
-        case ShowAlarm2:
+        case ShowFeedTime2:
             switch (b.pinValue()) {
             case CtrlPin:
                 break;
             case Lt_Pin:
                 break;
             case Rt_Pin:
-                ClockState = EditAlarm2;
+                FeederState = EditFeedTime2;
                 cpIndex = 0;
                 buttonHoldPrevTime = millis();
                 bHoldButtonFlag = true;
@@ -812,7 +842,7 @@ void ButtonHold(Button& b) {
             case Lt_Pin:
             case Rt_Pin:
                 clearAlarms();
-                ClockState = ShowClock;
+                FeederState = ShowClock;
                 buttonHoldPrevTime = millis();
                 bHoldButtonFlag = true;
                 displayClock(true);
@@ -827,7 +857,7 @@ void ButtonHold(Button& b) {
             case CtrlPin:
                 lcd.noBlink();
                 lcd.noCursor();
-                ClockState = ShowClock;
+                FeederState = ShowClock;
                 buttonHoldPrevTime = millis();
                 bHoldButtonFlag = true;
                 break;
@@ -842,7 +872,7 @@ void ButtonHold(Button& b) {
             case CtrlPin:
                 lcd.noBlink();
                 lcd.noCursor();
-                ClockState = ShowClock;
+                FeederState = ShowClock;
                 buttonHoldPrevTime = millis();
                 bHoldButtonFlag = true;
                 displayClock(true);
@@ -858,7 +888,7 @@ void ButtonHold(Button& b) {
             case CtrlPin:
                 lcd.noBlink();
                 lcd.noCursor();
-                ClockState = ShowClock;
+                FeederState = ShowClock;
                 buttonHoldPrevTime = millis();
                 bHoldButtonFlag = true;
                 displayClock(true);
@@ -877,14 +907,14 @@ void ButtonHold(Button& b) {
 }
 
 
-void displayFeedTime(byte index, bool changeFlag) {                                       
+void displayFeedTime(byte index = 1, bool changeFlag = false) {                                       
     AlarmTime feed;            //create AlarmTime struct from Library
 
     if (index == FeedTime2) {
-        alarm = Clock.readAlarm(FeedTime2);      // get the latest FeedTime2 values
+        feed = Clock.readAlarm(FeedTime2);      // get the latest FeedTime2 values
     }
     else {
-        alarm = Clock.readAlarm(FeedTime1);      // get the latest alarm1 values
+        feed = Clock.readAlarm(FeedTime1);      // get the latest alarm1 values
     }
 
     // Check for Alarm change
@@ -1035,7 +1065,7 @@ void displayClock(bool changeFlag = false) {
         lcd.setCursor(0, 1);                       // Column, Row
         lcd.print("Nxt Feed ");          // amount of food remaining in the container
 
-         displayNextFeed();                                         
+        displayNextFeed();                                         
         lcd.write(4);                             //Skinny letter F
         lcdAlarmIndicator();                      //lcd.print A1, A2, BA, or -
 
@@ -1101,4 +1131,81 @@ void toggleBuzzer() {
     else{
       noTone(BUZZER_Pin);  // stop the tone playing:
     }
+}
+
+
+void editClock(byte i) {
+    //First Row  hh:mm AM ###.#°F
+    //Second Row dow mm/dd/yyyyA^
+    //                             hh    mm    AM     F    
+    byte cursorPositions[][2] = { {1,0},{4,0},{7,0},{15,0} };
+    lcd.setCursor(cursorPositions[i][0], cursorPositions[i][1]);
+    lcd.cursor();
+    lcd.blink();
+}
+
+
+void editFeedTime(byte i) {
+    /* Alarm 1      ON
+     hh:mm AM Weekday           
+                                    hh    mm    AM   Weekday */
+    byte cursorPositions[][2] = { {1,1},{4,1},{7,1},{9,1} };
+    lcd.setCursor(cursorPositions[i][0], cursorPositions[i][1]);
+    lcd.cursor();
+    lcd.blink();
+}
+
+
+byte CheckFeedTimeStatus() {
+    /* Returns:
+     0 - No alarms
+     1 - Alarm 1 enabled
+     2 - Alarm 2 enabled
+     3 - Both alarms enabled
+    */
+    bool FeedTimeStatus = digitalRead(SQW_Pin);
+    byte flaggedFeedTimes = Clock.flaggedAlarms();
+
+    //INTSQW is Active-Low Interrupt
+    if (FeedTimeStatus == LOW) {       
+        FeederState = Feeding;  //feeding alarm detected
+    }
+    return flaggedFeedTimes;
+}
+
+
+void fixFeedTimeClockMode(byte FeedTimeIndex, byte NewClockMode) {
+    /** ********************************************************
+     * Fixes feedTime clockmode if clock.clockmode is switch
+     * between 12hr and 24hr clockmodes
+     ********************************************************* */
+     
+    AlarmTime feed = Clock.readAlarm(FeedTimeIndex);
+
+        if (feed.Hour > 12) {
+            feed.ClockMode = PMhr;
+        }
+        else {
+            feed.ClockMode = AMhr;
+        }
+        feed.Hour %= 12;
+        if (feed.Hour == 0) { feed.Hour = 12; }
+    
+    else if (NewClockMode == M24hr) {
+        feed.Hour %= 12;
+        feed.Hour += (12 * feed.ClockMode);
+        feed.ClockMode = M24hr;
+    }
+    Clock.setAlarm(feed, FeedTimeIndex);
+
+}
+
+
+void displayNextFeed(){
+   
+}
+
+
+void showAmtOfFood(){
+  
 }
