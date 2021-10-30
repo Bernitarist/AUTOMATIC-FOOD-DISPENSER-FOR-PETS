@@ -27,6 +27,7 @@
  Button CtrlKey(CtrlPin, BUTTON_PULLUP_INTERNAL, true, DebouceTime);  //button pin, button mode, debounce mode(bool), debounce time
  Button LtKey(Lt_Pin, BUTTON_PULLUP_INTERNAL, true, DebouceTime);
  Button RtKey(Rt_Pin, BUTTON_PULLUP_INTERNAL, true, DebouceTime);
+ unsigned long buttonHoldPrevTime = 0.0;  // Used to track button hold times 
 
 const byte clock0 = 0;
 const byte FeedTime1 = 1;  //all clock Modes
@@ -134,11 +135,11 @@ void setup() {
 
          //Button callback functions 
     LtKey.clickHandler(ButtonClick);
-    //LtKey.holdHandler(ButtonHold, Button_Hold_Time);
+    LtKey.holdHandler(ButtonHold, Button_Hold_Time);
     RtKey.clickHandler(ButtonClick);
-    //RtKey.holdHandler(ButtonHold, Button_Hold_Time);
+    RtKey.holdHandler(ButtonHold, Button_Hold_Time);
     CtrlKey.clickHandler(ButtonClick);
-    //CtrlKey.holdHandler(ButtonHold, Button_Hold_Time);
+    CtrlKey.holdHandler(ButtonHold, Button_Hold_Time);
 
     //Display the clock
     //displayClock(true);
@@ -626,86 +627,155 @@ void changeAlarmMode(byte i, bool increment) {
 }
 
 
-void displayFeedTime(byte index, bool changeFlag) {
-    AlarmTime feed;            
+void ButtonHold(Button& b) {
+    // PowerLoss, ShowClock, ShowFeedTime1, ShowFeedTime2, Feeding, EditClock, EditFeedTime1, EditFeedTime2
 
-    if (index == alarm2) {
-        alarm = Clock.readAlarm(alarm2);      // get the latest alarm2 values
-    }
-    else {
-        alarm = Clock.readAlarm(alarm1);      // get the latest alarm1 values
-    }
-
-    // Check for Alarm change
-    if (alarm.Hour != PreviousAlarm.Hour) { changeFlag = true; }
-    if (alarm.Minute != PreviousAlarm.Minute) { changeFlag = true; }
-    if (alarm.ClockMode != PreviousAlarm.ClockMode) { changeFlag = true; }
-    if (alarm.AlarmMode != PreviousAlarm.AlarmMode) { changeFlag = true; }
-
-    //Update Display - Only change display if change is detected
-    if (changeFlag == true) {
-        lcd.clear();
-
-        // First row
-        lcd.setCursor(0, 0);
-        if (index == alarm2) {
-            lcd.print("Alarm 2");
-        }
-        else {
-            lcd.print("Alarm 1");
-        }
-        lcd.setCursor(13, 0);
-        if (alarm.Enabled == true) {
-            lcd.print("ON");
-        }
-        else {
-            lcd.print("OFF");
-        }
-
-        //Second row
-        lcd.setCursor(0, 1);
-        lcd.print(p2Digits(alarm.Hour));
-        lcd.print(":");
-        lcd.print(p2Digits(alarm.Minute));
-        switch (alarm.ClockMode) {
-        case AMhr:
-            //AM
-            lcd.print(" AM");
+    // To ignore back to back button hold? 
+    if ((millis() - buttonHoldPrevTime) > 2000) {
+        switch (FeederState) {
+        case PowerLoss:
+            FeederState = EditClock;
+            cpIndex = 0;
+            buttonHoldPrevTime = millis();
+            bHoldButtonFlag = true;
+            Clock.clearOSFStatus();
             break;
-        case PMhr:
-            //PM
-            lcd.print(" PM");
+        case ShowClock:
+            switch (b.pinValue()) {
+            case CtrlPin:
+                FeederState = EditClock;
+                cpIndex = 0;
+                buttonHoldPrevTime = millis();
+                bHoldButtonFlag = true;
+                break;
+            case Lt_Pin:
+                FeederState = EditFeedTime1;
+                cpIndex = 0;
+                buttonHoldPrevTime = millis();
+                bHoldButtonFlag = true;
+                displayFeedTime(1, true);
+                break;
+            case Rt_Pin:
+                ClockState = EditFeedTime2;
+                cpIndex = 0;
+                buttonHoldPrevTime = millis();
+                bHoldButtonFlag = true;
+                displayFeedTime(2, true);
+                break;
+            default:
+                break;
+            }
             break;
-        case M24hr:
-            //24hr
-            lcd.print("  M");
+        case ShowFeedTime1:
+            switch (b.pinValue()) {
+            case CtrlPin:
+                break;
+            case Lt_Pin:
+                FeederState = EditFeedTime1;
+                cpIndex = 0;
+                buttonHoldPrevTime = millis();
+                bHoldButtonFlag = true;
+                displayAlarm(1, true);
+                //Switch to edit mode
+                break;
+            case Rt_Pin:
+                break;
+            default:
+                break;
+            }
+            break;
+        case ShowAlarm2:
+            switch (b.pinValue()) {
+            case Snooze_Pin:
+                break;
+            case Lt_Pin:
+                break;
+            case Rt_Pin:
+                //Edit Alarm2
+                ClockState = EditAlarm2;
+                cpIndex = 0;
+                buttonHoldPrevTime = millis();
+                bHoldButtonFlag = true;
+                displayAlarm(2, true);
+                break;
+            default:
+                break;
+            }
+            break;
+        case Alarm:
+            //Alarm Mode
+            switch (b.pinValue()) {
+            case Snooze_Pin:
+                Snooze();             //Snooze alarm for 9 minutes
+                ClockState = ShowClock;
+                buttonHoldPrevTime = millis();
+                bHoldButtonFlag = true;
+                displayClock(true);
+                break;
+            case Lt_Pin:
+            case Rt_Pin:
+                //turn off alarms
+                clearAlarms();
+                ClockState = ShowClock;
+                buttonHoldPrevTime = millis();
+                bHoldButtonFlag = true;
+                displayClock(true);
+                break;
+            default:
+                //do nothing
+                break;
+            }
+            break;
+        case EditClock:  //Edit Clock
+            switch (b.pinValue()) {
+            case Snooze_Pin:
+                lcd.noBlink();
+                lcd.noCursor();
+                ClockState = ShowClock;
+                buttonHoldPrevTime = millis();
+                bHoldButtonFlag = true;
+                break;
+            case Lt_Pin:
+            case Rt_Pin:
+            default:
+                break;
+            }
+            break;
+        case EditAlarm1:  //Edit Alarm1
+            switch (b.pinValue()) {
+            case Snooze_Pin:
+                lcd.noBlink();
+                lcd.noCursor();
+                ClockState = ShowClock;
+                buttonHoldPrevTime = millis();
+                bHoldButtonFlag = true;
+                displayClock(true);
+                break;
+            case Lt_Pin:
+            case Rt_Pin:
+            default:
+                break;
+            }
+            break;
+        case EditAlarm2:  //Edit Alarm1
+            switch (b.pinValue()) {
+            case Snooze_Pin:
+                lcd.noBlink();
+                lcd.noCursor();
+                ClockState = ShowClock;
+                buttonHoldPrevTime = millis();
+                bHoldButtonFlag = true;
+                displayClock(true);
+                break;
+            case Lt_Pin:
+            case Rt_Pin:
+            default:
+                break;
+            }
             break;
         default:
-            lcd.print("  M");
+            //todo
             break;
         }
-        switch (alarm.AlarmMode) {
-            //0=Daily, 1=Weekday, 2=Weekend, 3=Once
-        case 0:
-            //Daily
-            lcd.print(" Daily");
-            break;
-        case 1:
-            //Weekday
-            lcd.print(" Weekday");
-            break;
-        case 2:
-            //Weekend
-            lcd.print(" Weekend");
-            break;
-        case 3:
-            //Once
-            lcd.print(" Once");
-            break;
-        default:
-            //do nothing
-            break;
-        }
-        PreviousAlarm = alarm;
     }
 }
