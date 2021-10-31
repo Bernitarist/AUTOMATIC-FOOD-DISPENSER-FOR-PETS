@@ -4,13 +4,16 @@
 #include <LiquidCrystal_I2C.h>
 #include <SimpleAlarmClock.h>
 #include <Button.h> 
-#include <Servo.h>
 #include "pitches.h"
+#include "NewPing.h"
 
 
                                       /************
                                        * CONSTANTS
                                       *************/
+ #define trigPin 6
+ #define echoPin 6
+ #define MAXDistance 200                                      
  const int redLedPin = 13; 
  const int greenLedPin = 8;
  const int buzzerPin = 7;
@@ -23,7 +26,7 @@
 
  LiquidCrystal_I2C lcd(0x27, 16, 2);                     //lcd object created
  SimpleAlarmClock Clock(RTC_addr, EEPROM_addr, INTCN);  //clock object
- Servo Myservo;  //servo object created
+ NewPing sonar(trigPin, echoPin, MAXDistance);         //ultra sonic sensor object
 
  const int CtrlPin = 11;
  const int Lt_Pin = 9;
@@ -67,6 +70,8 @@ const byte Once = 3;
  bool bDisplayStatus = true;  // used to track the lcd display ON status
  byte cpIndex = 0;  // Cursor Position Index 
  byte ActiveFeedTimes = 0;  // used to store active alarms (not enabled alarms)
+
+ unsigned int maxDistance = 20;  //max dist measured by sensor
 
  int melody[] = { 
     NOTE_C6, NOTE_C6, NOTE_C6, NOTE_C6, NOTE_C6,  //notes to determine pitch of buzzer sound
@@ -154,6 +159,7 @@ void fixFeedTimeClockMode(byte FeedTimeIndex, byte NewClockMode);
 void displayNextFeed();
 void showAmtOfFood();
 void feederDoor();
+void welcome();
 
 
 void setup() {       
@@ -167,12 +173,14 @@ void setup() {
     pinMode(buzzerPin, OUTPUT);
     digitalWrite(buzzerPin, LOW);
 
-    Myservo.attach(ServoPin);
          
           //LCD Stuff       
     lcd.init();  
     lcd.clear();
     lcd.backlight();
+    welcome();
+    delay(4000);
+    lcd.clear();
     
          //Create custom lcd characters
     lcd.createChar(1, upArrow);   
@@ -1015,16 +1023,16 @@ String p2Digits(int numValue) {
 
 
 void displayClock(bool changeFlag = false) {
-    /* ***************************************************** *
+    /* 
      *   changeFlag - true forces display refresh
      *              - false does nothing
-     * ***************************************************** */
+     */
+
+    unsigned int distance = sonar.ping_cm();  //ping in cm
     DateTime NowTime;            //create DateTime struct from Library
     NowTime = Clock.read();      // get the latest clock values
 
-    // CheckFlag Section:
-    // Check the temperature every 65 seconds OR
-    // Check the temperature if Fahrenheit changes
+        // Check the temperature every 65 seconds OR
     unsigned long uL = millis() - RunTime;
     if ((uL >= 65000) || (Fahrenheit != PrevFahrenheit)) {
         float PreviousTemperature = CurrentTemperature;
@@ -1080,6 +1088,10 @@ void displayClock(bool changeFlag = false) {
 
         PreviousTime = Clock.read();
     }
+
+    if(distance < maxDistance ){  //and feed plate is empty
+        feederDoor();
+      }
 }
 
 
@@ -1113,6 +1125,7 @@ void lcdAlarmIndicator() {
 
 
 void toggleLEDred(bool ledON = true) {
+    unsigned int distance = sonar.ping_cm(); // Ping in cm
     bool ledState;
 
     ledState = digitalRead(redLedPin);                //get the state of LED
@@ -1122,24 +1135,24 @@ void toggleLEDred(bool ledON = true) {
     else {
         digitalWrite(redLedPin, LOW);
     }
+    if(distance < maxDistance){ digitalWrite(redLedPin, LOW); }
 }
 
 
 void toggleBuzzer() {
-    if(dist < 4.5) {
-      
-        // to calculate the note duration, take one second divided by the note type.
-        // e.g. quarter note = 1000 / 4, eighth note = 1000/8, etc.
-        int noteDuration = 1000 / noteDurations[thisNote];
-        tone(buzzerPin, melody[thisNote], noteDuration);
+    int thisNote;
+    unsigned int distance = sonar.ping_cm(); // Ping in cm
 
-        int pauseBetweenNotes = noteDuration * 1.30;  //to distinguish the notes, set a minimum time between them. the note's duration + 30% seems to work well:
-        delay(pauseBetweenNotes);              
-    }
+       if(distance >= maxDistance){ 
+        for(thisNote = 0;thisNote < 5;thisNote++){ 
+          int noteDuration = 1000 / noteDurations[thisNote];  // to calculate the note duration, take one second divided by the note type. e.g. quarter note = 1000 / 4,
+          tone(buzzerPin, melody[thisNote], noteDuration);
 
-    else{
-      noTone(BUZZER_Pin);  // stop the tone playing:
-    }
+          int pauseBetweenNotes = noteDuration * 1.30;  //to distinguish the notes, set a minimum time between them. the note's duration + 30% seems to work well:
+          delay(pauseBetweenNotes);
+        }
+       }
+       else { noTone(buzzerPin); }  //stop the buzzer               
 }
 
 
@@ -1221,5 +1234,138 @@ void showAmtOfFood(){
 
 
 void feederDoor(){
- 
+ unsigned int distance = sonar.ping_cm(); // Ping in cm
+
+    if(distance < maxDistance){  //and feed plate empty
+      
+      }
 }
+
+
+void welcome() {
+    byte zero[8] =
+    {
+    0b00000,
+    0b11000,
+    0b11000,
+    0b10100,
+    0b10011,
+    0b10000,
+    0b10010,
+    0b10000
+    };
+    byte one[8] =
+    {
+    0b00000,
+    0b00110,
+    0b00110,
+    0b01010,
+    0b10010,
+    0b00010,
+    0b10010,
+    0b00010
+    };
+    byte two[8] =
+    {
+    0b00000,
+    0b00000,
+    0b00000,
+    0b00000,
+    0b00000,
+    0b00001,
+    0b00010,
+    0b00011
+    };
+    byte three[8] =
+    {
+    0b00000,
+    0b00000,
+    0b00000,
+    0b00000,
+    0b00000,
+    0b11000,
+    0b00100,
+    0b10010
+    };
+    byte four[8] =
+    {
+    0b10011,
+    0b01000,
+    0b00111,
+    0b00010,
+    0b00111,
+    0b01000,
+    0b01000,
+    0b00111
+    };
+    byte five[8] =
+    {
+    0b10010,
+    0b00100,
+    0b11011,
+    0b00000,
+    0b00000,
+    0b00001,
+    0b00010,
+    0b11111
+    };
+    byte six[8] =
+    {
+    0b00000,
+    0b00000,
+    0b11100,
+    0b00011,
+    0b10001,
+    0b00001,
+    0b00001,
+    0b11110
+    };
+    byte seven[8] =
+    {
+    0b00101,
+    0b00101,
+    0b00101,
+    0b11001,
+    0b00010,
+    0b11100,
+    0b00000,
+    0b00000
+    };
+
+
+    lcd.createChar(0, zero);
+    lcd.createChar(1, one);
+    lcd.createChar(2, two);
+    lcd.createChar(3, three);
+    lcd.createChar(4, four);
+    lcd.createChar(5, five);
+    lcd.createChar(6, six);
+    lcd.createChar(7, seven);
+
+    lcd.setCursor(0, 0);
+    lcd.print("WELCOME!!  ");
+
+    lcd.setCursor(10, 0);
+    lcd.write(byte(0));
+    lcd.setCursor(11, 0);
+    lcd.write(byte(1));
+    lcd.setCursor(12, 0);
+    lcd.write(byte(2));
+    lcd.setCursor(13, 0);
+    lcd.write(byte(3));
+    lcd.setCursor(10, 1);
+    lcd.write(byte(4));
+    lcd.setCursor(11, 1);
+    lcd.write(byte(5));
+    lcd.setCursor(12, 1);
+    lcd.write(byte(6));
+    lcd.setCursor(13, 1);
+    lcd.write(byte(7));
+}
+
+
+
+
+/*
+ * 
+ */
