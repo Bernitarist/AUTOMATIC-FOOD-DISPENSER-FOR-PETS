@@ -4,6 +4,7 @@
 #include <LiquidCrystal_I2C.h>
 #include <SimpleAlarmClock.h>
 #include <Button.h> 
+#include <Servo.h>
 #include "pitches.h"
 
 
@@ -11,9 +12,10 @@
                                        * CONSTANTS
                                       *************/
  const int redLedPin = 13; 
- const int greenLedPin = 7;
- const int buzzerPin = 6;
+ const int greenLedPin = 8;
+ const int buzzerPin = 7;
  const int SQW_Pin = 2;
+ const int ServoPin = 12;
 
  const byte RTC_addr = 0x68;      // I2C address of DS3231 RTC
  const byte EEPROM_addr = 0x57;  // I2C address of AT24C32N EEPROM
@@ -21,6 +23,7 @@
 
  LiquidCrystal_I2C lcd(0x27, 16, 2);                     //lcd object created
  SimpleAlarmClock Clock(RTC_addr, EEPROM_addr, INTCN);  //clock object
+ Servo Myservo;  //servo object created
 
  const int CtrlPin = 11;
  const int Lt_Pin = 9;
@@ -69,6 +72,8 @@ const byte Once = 3;
     NOTE_C6, NOTE_C6, NOTE_C6, NOTE_C6, NOTE_C6,  //notes to determine pitch of buzzer sound
 };
 int noteDurations[] = { 16, 16, 16, 16, 16 };  // note durations: 4 = quarter note, 8 = eighth note, etc.:
+
+int angle = 0;
  
  enum States {
     PowerLoss,
@@ -148,6 +153,7 @@ byte CheckFeedTimeStatus();
 void fixFeedTimeClockMode(byte FeedTimeIndex, byte NewClockMode);
 void displayNextFeed();
 void showAmtOfFood();
+void feederDoor();
 
 
 void setup() {       
@@ -160,6 +166,8 @@ void setup() {
     digitalWrite(greenLedPin, HIGH);
     pinMode(buzzerPin, OUTPUT);
     digitalWrite(buzzerPin, LOW);
+
+    Myservo.attach(ServoPin);
          
           //LCD Stuff       
     lcd.init();  
@@ -254,6 +262,7 @@ void loop() {
             bDisplayStatus = !bDisplayStatus;
             toggleLEDred();
             toggleBuzzer();
+            feederDoor();
         }
         break;
         
@@ -1208,4 +1217,9 @@ void displayNextFeed(){
 
 void showAmtOfFood(){
   
+}
+
+
+void feederDoor(){
+ 
 }
