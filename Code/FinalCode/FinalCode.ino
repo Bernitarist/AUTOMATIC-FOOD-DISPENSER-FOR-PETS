@@ -122,8 +122,8 @@ byte bothArrows[8] = {
 
 byte FeedLetter[8] = {
               0b00000,
-              0b00000,
               0b00111,
+              0b00100,
               0b00100,  //Skinny letter F
               0b00111,
               0b00100,
@@ -134,36 +134,39 @@ byte FeedLetter[8] = {
                                       /*********************
                                       * FUNCTION PROTOTYPES
                                       **********************/
+//bool checkDistance();                                     
 void displayClock(bool changeFlag = false);
 float getTemperatureValue();
 void ButtonClick(Button& b);
 void showFeedTime(byte i);
-void clearAlarms();
-void changeHour(byte i, bool increment);
-void changeMinute(byte i, bool increment);
-void changeClockMode(byte i, bool increment);
-void changeTemp();
-void changeAmtOfFood(bool increment);
-void changeAlarmMode(byte i, bool increment);
+//void clearAlarms();
+//void changeHour(byte i, bool increment);
+//void changeMinute(byte i, bool increment);
+//void changeClockMode(byte i, bool increment);
+//void changeTemp();
+//void changeAmtOfFood(bool increment);
+//void changeAlarmMode(byte i, bool increment);
 void ButtonHold(Button& b);
 void displayFeedTime(byte index = 1, bool changeFlag = false);
 String p2Digits(int numValue);
-void displayClock(bool changeFlag = false);
 void lcdAlarmIndicator();
-void toggleLEDred(bool ledON = true);
-void toggleBuzzer();
+//void toggleLEDred(bool ledON = true);
+//void toggleBuzzer();
 void editClock(byte i);
 void editFeedTime(byte i);
-byte CheckFeedTimeStatus();
-void fixFeedTimeClockMode(byte FeedTimeIndex, byte NewClockMode);
-void displayNextFeed();
-void showAmtOfFood();
-void feederDoor();
+//byte CheckFeedTimeStatus();
+//void fixFeedTimeClockMode(byte FeedTimeIndex, byte NewClockMode);
+//void displayNextFeed();
+//void showAmtOfFood();
+//void feederDoor();
 void welcome();
 
+//bool distConfirmed = checkDistance();  //check the sensor dist and the floor
 
 void setup() {       
     RunTime = millis();   // Get the start time
+    Serial.begin(9600);
+    
            
            // Pin Modes      
     pinMode(redLedPin, OUTPUT);     
@@ -254,25 +257,25 @@ void loop() {
             displayClock(true);
         }
         break;
-    case Feeding:
-        displayClock();
-        digitalWrite(greenLedPin, LOW);
-        
-        //Flash Clock
-        if ((millis() - previousMillis) >= flashInterval) {
-            previousMillis = millis();
-            if (bDisplayStatus == true) {
-                lcd.noDisplay();
-            }
-            else {
-                lcd.display();
-            }
-            bDisplayStatus = !bDisplayStatus;
-            toggleLEDred();
-            toggleBuzzer();
-            feederDoor();
-        }
-        break;
+//    case Feeding:
+//        displayClock();
+//        digitalWrite(greenLedPin, LOW);
+//        
+//        //Flash Clock
+//        if ((millis() - previousMillis) >= flashInterval) {
+//            previousMillis = millis();
+//            if (bDisplayStatus == true) {
+//                lcd.noDisplay();
+//            }
+//            else {
+//                lcd.display();
+//            }
+//            bDisplayStatus = !bDisplayStatus;
+//            toggleLEDred();
+//            toggleBuzzer();
+//            //feederDoor();
+//        }
+//        break;
         
     case EditClock:
         digitalWrite(greenLedPin, LOW);
@@ -281,10 +284,12 @@ void loop() {
         break;
         
     case EditFeedTime1:
+        digitalWrite(greenLedPin, LOW);
         editFeedTime(cpIndex);
         displayFeedTime(FeedTime1);
         break;
     case EditFeedTime2:
+        digitalWrite(greenLedPin, LOW);
         editFeedTime(cpIndex);
         displayFeedTime(FeedTime2);
         break;
@@ -295,7 +300,7 @@ void loop() {
     LtKey.process();
     RtKey.process();
     CtrlKey.process();
-    ActiveFeedTimes = CheckFeedTimeStatus();  //Returns which FeedTime are active
+//    ActiveFeedTimes = CheckFeedTimeStatus();  //Returns which FeedTime are active
 
 }
 
@@ -329,9 +334,11 @@ void ButtonClick(Button& b) {
                 //Do Nothing
                 break;
             case Lt_Pin:
+                Serial.println("left button clicked");
                 showFeedTime(FeedTime1);
                 break;
             case Rt_Pin:
+                Serial.println("right button clicked");
                 showFeedTime(FeedTime2);
                 break;
             default:
@@ -340,202 +347,202 @@ void ButtonClick(Button& b) {
             }
             break;
             //ShowAlarm1 or ShowFeedTime2 does nothing
-        case Feeding:
-            switch (b.pinValue()) {
-            case CtrlPin:
-                FeederState = ShowClock;
-                break;
-            case Lt_Pin:
-            case Rt_Pin:
-                //turn off alarms
-                clearAlarms();
-                FeederState = ShowClock;
-                break;
-            default:
-                //do nothing
-                break;
-            }
-            break;
-        case EditClock:
-            //Edit Clock Mode
-            switch (b.pinValue()) {
-            case CtrlPin:
-                //Increments cursor position
-                //cpIndex += 1 % 5;
-                cpIndex += 1;
-                cpIndex %= 5;
-                break;
-            case Lt_Pin:
-                // Decrements value
-                // First Row  hh:mm AM ###.#°F
-                //             0  1  2       3
-                // Second Row          ##.#Kg
-                //                        4
-                switch (cpIndex) {
-                case 0:
-                    changeHour(clock0, false);
-                    break;
-                case 1:
-                    changeMinute(clock0, false);
-                    break;
-                case 2:
-                    changeClockMode(clock0, false);
-                    break;
-                case 3:
-                    changeTemp();
-                    break;
-                case 4:
-                    changeAmtOfFood(false);
-                    break; 
-                default:
-                    //do nothing
-                    break;
-                }
-                break;
-            case Rt_Pin:
-                // Increments value
-                switch (cpIndex) {
-                case 0:
-                    changeHour(clock0, true);
-                    break;
-                case 1:
-                    changeMinute(clock0, true);
-                    break;
-                case 2:
-                    changeClockMode(clock0, true);
-                    break;
-                case 3:
-                    changeTemp();
-                    break;
-                case 4:
-                    changeAmtOfFood(true);
-                    break;
-                default:
-                    //do nothing
-                    break;
-                }
-                break;
-            default:
-                //do nothing
-                break;
-            }
-            //End EditClock
-            break;
-        case EditFeedTime1:
-            switch (b.pinValue()) {
-            case CtrlPin:
-                //Increments cursor position
-                cpIndex += 1;
-                cpIndex %= 4;
-                break;
-            case Lt_Pin:
-                // Decrements value      hh:mm AM Weekday
-                
-                switch (cpIndex) {
-                case 0:
-                    changeHour(FeedTime1, false);
-                    break;
-                case 1:
-                    changeMinute(FeedTime1, false);
-                    break;
-                case 2:
-                    changeClockMode(FeedTime1, false);
-                    break;
-                case 3:
-                    changeAlarmMode(FeedTime1, false);
-                    break;
-                default:
-                    //do nothing
-                    break;
-                }
-                break;
-            case Rt_Pin:
-                // Increments value
-                switch (cpIndex) {
-                case 0:
-                    changeHour(FeedTime1, true);
-                    break;
-                case 1:
-                    changeMinute(FeedTime1, true);
-                    break;
-                case 2:
-                    changeClockMode(FeedTime1, true);
-                    break;
-                case 3:
-                    changeAlarmMode(FeedTime1, true);
-                    break;
-                default:
-                    //do nothing
-                    break;
-                }
-                break;
-            default:
-                //do nothing
-                break;
-            }
-            break;
-        case EditFeedTime2:
-            switch (b.pinValue()) {
-            case CtrlPin:
-                //Increments cursor position
-                cpIndex += 1;
-                cpIndex %= 4;
-                break;
-            case Lt_Pin:
-                // Decrements value      hh:mm AM Weekday
-                
-                switch (cpIndex) {
-                case 0:
-                    changeHour(FeedTime2, false);
-                    break;
-                case 1:
-                    changeMinute(FeedTime2, false);
-                    break;
-                case 2:
-                    changeClockMode(FeedTime2, false);
-                    break;
-                case 3:
-                    changeAlarmMode(FeedTime2, false);
-                    break;
-                default:
-                    //do nothing
-                    break;
-                }
-                break;
-            case Rt_Pin:
-                // Increments value
-
-                switch (cpIndex) {
-                case 0:
-                    changeHour(FeedTime2, true);
-                    break;
-                case 1:
-                    changeMinute(FeedTime2, true);
-                    break;
-                case 2:
-                    changeClockMode(FeedTime2, true);
-                    break;
-                case 3:
-                    changeAlarmMode(FeedTime2, true);
-                    break;
-                default:
-                    //do nothing
-                    break;
-                }
-                break;
-            default:
-                //do nothing
-                break;
-            }
-            break;
+//        case Feeding:
+//            switch (b.pinValue()) {
+//            case CtrlPin:
+//                FeederState = ShowClock;
+//                break;
+//            case Lt_Pin:
+//            case Rt_Pin:
+//                //turn off alarms
+//                clearAlarms();
+//                FeederState = ShowClock;
+//                break;
+//            default:
+//                //do nothing
+//                break;
+//            }
+//            break;
+//        case EditClock:
+//            //Edit Clock Mode
+//            switch (b.pinValue()) {
+//            case CtrlPin:
+//                //Increments cursor position
+//                //cpIndex += 1 % 5;
+//                cpIndex += 1;
+//                cpIndex %= 5;
+//                break;
+//            case Lt_Pin:
+//                // Decrements value
+//                // First Row  hh:mm AM ###.#°F
+//                //             0  1  2       3
+//                // Second Row          ##.#Kg
+//                //                        4
+//                switch (cpIndex) {
+//                case 0:
+//                    changeHour(clock0, false);
+//                    break;
+//                case 1:
+//                    changeMinute(clock0, false);
+//                    break;
+//                case 2:
+//                    changeClockMode(clock0, false);
+//                    break;
+//                case 3:
+//                    changeTemp();
+//                    break;
+//                case 4:
+//                    changeAmtOfFood(false);
+//                    break; 
+//                default:
+//                    //do nothing
+//                    break;
+//                }
+//                break;
+//            case Rt_Pin:
+//                // Increments value
+//                switch (cpIndex) {
+//                case 0:
+//                    changeHour(clock0, true);
+//                    break;
+//                case 1:
+//                    changeMinute(clock0, true);
+//                    break;
+//                case 2:
+//                    changeClockMode(clock0, true);
+//                    break;
+//                case 3:
+//                    changeTemp();
+//                    break;
+//                case 4:
+//                    changeAmtOfFood(true);
+//                    break;
+//                default:
+//                    //do nothing
+//                    break;
+//                }
+//                break;
+//            default:
+//                //do nothing
+//                break;
+//            }
+//            //End EditClock
+//            break;
+//        case EditFeedTime1:
+//            switch (b.pinValue()) {
+//            case CtrlPin:
+//                //Increments cursor position
+//                cpIndex += 1;
+//                cpIndex %= 4;
+//                break;
+//            case Lt_Pin:
+//                // Decrements value      hh:mm AM Weekday
+//                
+//                switch (cpIndex) {
+//                case 0:
+//                    changeHour(FeedTime1, false);
+//                    break;
+//                case 1:
+//                    changeMinute(FeedTime1, false);
+//                    break;
+//                case 2:
+//                    changeClockMode(FeedTime1, false);
+//                    break;
+//                case 3:
+//                    changeAlarmMode(FeedTime1, false);
+//                    break;
+//                default:
+//                    //do nothing
+//                    break;
+//                }
+//                break;
+//            case Rt_Pin:
+//                // Increments value
+//                switch (cpIndex) {
+//                case 0:
+//                    changeHour(FeedTime1, true);
+//                    break;
+//                case 1:
+//                    changeMinute(FeedTime1, true);
+//                    break;
+//                case 2:
+//                    changeClockMode(FeedTime1, true);
+//                    break;
+//                case 3:
+//                    changeAlarmMode(FeedTime1, true);
+//                    break;
+//                default:
+//                    //do nothing
+//                    break;
+//                }
+//                break;
+//            default:
+//                //do nothing
+//                break;
+//            }
+//            break;
+//        case EditFeedTime2:
+//            switch (b.pinValue()) {
+//            case CtrlPin:
+//                //Increments cursor position
+//                cpIndex += 1;
+//                cpIndex %= 4;
+//                break;
+//            case Lt_Pin:
+//                // Decrements value      hh:mm AM Weekday
+//                
+//                switch (cpIndex) {
+//                case 0:
+//                    changeHour(FeedTime2, false);
+//                    break;
+//                case 1:
+//                    changeMinute(FeedTime2, false);
+//                    break;
+//                case 2:
+//                    changeClockMode(FeedTime2, false);
+//                    break;
+//                case 3:
+//                    changeAlarmMode(FeedTime2, false);
+//                    break;
+//                default:
+//                    //do nothing
+//                    break;
+//                }
+//                break;
+//            case Rt_Pin:
+//                // Increments value
+//
+//                switch (cpIndex) {
+//                case 0:
+//                    changeHour(FeedTime2, true);
+//                    break;
+//                case 1:
+//                    changeMinute(FeedTime2, true);
+//                    break;
+//                case 2:
+//                    changeClockMode(FeedTime2, true);
+//                    break;
+//                case 3:
+//                    changeAlarmMode(FeedTime2, true);
+//                    break;
+//                default:
+//                    //do nothing
+//                    break;
+//                }
+//                break;
+//            default:
+//                //do nothing
+//                break;
+//            }
+//            break;
         default:
             //todo
             break;
         }
     }
 }
-
-
+//
+//
 void showFeedTime(byte i) {
         if (i == 2) {
             FeederState = ShowFeedTime2;
@@ -554,226 +561,226 @@ void showFeedTime(byte i) {
 }
 
 
-void clearAlarms() {  
-    Clock.clearAlarms();  //Clear alarm flags
-    toggleLEDred(false);
-    lcd.display();  // Just in case it was off
-}
-
-
-void changeHour(byte i, bool increment) {
-    AlarmTime feed;
-    DateTime NowTime;  //create DateTime struct from Library
-    int Hour;
-    byte ClockMode;
-
-   switch (i) {
-    case clock0:
-        NowTime = Clock.read();  // get the latest clock values
-        Hour = NowTime.Hour;
-        ClockMode = NowTime.ClockMode;
-        break;
-    case FeedTime1:
-        feed = Clock.readAlarm(FeedTime1);
-        Hour = feed.Hour;
-        ClockMode = feed.ClockMode;
-        break;
-    case FeedTime2:
-        feed = Clock.readAlarm(FeedTime2);
-        Hour = feed.Hour;
-        ClockMode = feed.ClockMode;
-        break;
-    default:
-        //Clock
-        NowTime = Clock.read();      // get the latest clock values
-        Hour = NowTime.Hour;
-        ClockMode = NowTime.ClockMode;
-        break;
-    }
-    switch (ClockMode) {
-    case AMhr:
-    case PMhr:
-        if (increment == true) {
-            Hour += 1;
-            Hour %= 12;
-        }
-        else {
-            Hour -= 1;
-            Hour %= 12;
-        }
-        if (Hour <= 0) { Hour = 12; }
-        break;
-    case M24hr:
-        if (increment == true) {
-            Hour += 1;
-            Hour %= 24;
-        }
-        else {
-            Hour -= 1;
-            Hour %= 24;
-        }
-        if (Hour < 0) { Hour = 23; }
-        break;
-    default:
-        //do nothing
-        break;
-    }
-    switch (i) {
-    case clock0:
-        NowTime.Hour = byte(Hour);
-        Clock.write(NowTime);
-        break;
-    case FeedTime1:
-        feed.Hour = byte(Hour);
-        Clock.setAlarm(feed, 1);
-        break;
-    case FeedTime2:
-        feed.Hour = byte(Hour);
-        Clock.setAlarm(feed, 2);
-        break;
-    default:
-        NowTime.Hour = byte(Hour);
-        Clock.write(NowTime);
-        break;
-    }
-
-}
-
-
-void changeMinute(byte i, bool increment) {
-    AlarmTime feed;
-    DateTime NowTime;            //create DateTime struct from Library
-    int Minute;
-
-   switch (i) {
-    case clock0:
-        NowTime = Clock.read();        // get the latest clock values
-        Minute = NowTime.Minute;
-        break;
-    case FeedTime1:
-        feed = Clock.readAlarm(FeedTime1);
-        Minute = feed.Minute;
-        break;
-    case FeedTime2:
-        feed = Clock.readAlarm(FeedTime2);
-        Minute = feed.Minute;
-        break;
-    default:
-        NowTime = Clock.read();        // get the latest clock values
-        Minute = NowTime.Minute;
-        break;
-    }
-    if (increment == true) {
-        Minute += 1;
-        Minute %= 60;
-    }
-    else {
-        Minute -= 1;
-        Minute %= 60;
-    }
-
-    if (Minute < 0) { Minute = 59; }
-    switch (i) {
-    case clock0:
-        NowTime.Minute = byte(Minute);
-        Clock.write(NowTime);
-        break;
-    case FeedTime1:
-        feed.Minute = byte(Minute);
-        Clock.setAlarm(feed, 1);
-        break;
-    case FeedTime2:
-        feed.Minute = byte(Minute);
-        Clock.setAlarm(feed, 2);
-        break;
-    default:
-        NowTime.Minute = byte(Minute);
-        Clock.write(NowTime);
-        break;
-    }
-
-}
-
-
-void changeClockMode(byte i, bool increment) {
-    AlarmTime feed;
-    DateTime NowTime = Clock.read();     //create DateTime struct from Library
-    int ClockMode = NowTime.ClockMode;   //int is able to be negative
-
-    switch (i) {
-    case clock0:
-        if (increment == true) {
-            ClockMode += 1;
-            ClockMode %= 3;
-        }
-        else {
-            ClockMode -= 1;
-            ClockMode %= 3;
-        }
-        if (ClockMode < 0) { ClockMode = 2; }
-        NowTime.ClockMode = byte(ClockMode);
-        Clock.write(NowTime);
-        fixFeedTimeClockMode(FeedTime1, NowTime.ClockMode);
-        fixFeedTimeClockMode(FeedTime2, NowTime.ClockMode);
-        break;
-    case FeedTime1:
-    case FeedTime2:
-        if (ClockMode != M24hr) {
-            feed = Clock.readAlarm(i);
-            if (feed.ClockMode == AMhr) {
-                feed.ClockMode = PMhr;
-            }
-            else {
-                feed.ClockMode = AMhr;
-            }
-            Clock.setAlarm(feed, i);
-        } //else do nothing
-        break;
-    default:
-        //do nothing
-        break;
-    }
-}
-
-
-void changeTemp() {
-    Fahrenheit = !Fahrenheit;  //change the temperature to F or C
-    CurrentTemperature = getTemperatureValue();
-    RunTime = millis();
-    displayClock(true);
-}
-
-
-void changeAmtOfFood(bool increment) {
-    float weight = 0.5;
-      if(increment == true){
-          weight += 0.5;
-        }
-      else {weight -= 0.5;}
-}
-
-
-void changeAlarmMode(byte i, bool increment) {
-    // Change AlarmMode to 0=Daily, 1=Weekday, 2=Weekend, 3=Once
-
-        AlarmTime feed = Clock.readAlarm(i);
-        int AlarmMode = feed.AlarmMode;
-
-        if (increment == true) {
-            AlarmMode += 1;
-            AlarmMode %= 4;
-        }
-        else {
-            AlarmMode -= 1;
-            AlarmMode %= 4;
-        }
-
-        if (AlarmMode < 0) { AlarmMode = 3; }
-        feed.AlarmMode = byte(AlarmMode);
-        Clock.setAlarm(feed, i);
-}
-
-
+//void clearAlarms() {  
+//    Clock.clearAlarms();  //Clear alarm flags
+//    toggleLEDred(false);
+//    lcd.display();  // Just in case it was off
+//}
+//
+//
+//void changeHour(byte i, bool increment) {
+//    AlarmTime feed;
+//    DateTime NowTime;  //create DateTime struct from Library
+//    int Hour;
+//    byte ClockMode;
+//
+//   switch (i) {
+//    case clock0:
+//        NowTime = Clock.read();  // get the latest clock values
+//        Hour = NowTime.Hour;
+//        ClockMode = NowTime.ClockMode;
+//        break;
+//    case FeedTime1:
+//        feed = Clock.readAlarm(FeedTime1);
+//        Hour = feed.Hour;
+//        ClockMode = feed.ClockMode;
+//        break;
+//    case FeedTime2:
+//        feed = Clock.readAlarm(FeedTime2);
+//        Hour = feed.Hour;
+//        ClockMode = feed.ClockMode;
+//        break;
+//    default:
+//        //Clock
+//        NowTime = Clock.read();      // get the latest clock values
+//        Hour = NowTime.Hour;
+//        ClockMode = NowTime.ClockMode;
+//        break;
+//    }
+//    switch (ClockMode) {
+//    case AMhr:
+//    case PMhr:
+//        if (increment == true) {
+//            Hour += 1;
+//            Hour %= 12;
+//        }
+//        else {
+//            Hour -= 1;
+//            Hour %= 12;
+//        }
+//        if (Hour <= 0) { Hour = 12; }
+//        break;
+//    case M24hr:
+//        if (increment == true) {
+//            Hour += 1;
+//            Hour %= 24;
+//        }
+//        else {
+//            Hour -= 1;
+//            Hour %= 24;
+//        }
+//        if (Hour < 0) { Hour = 23; }
+//        break;
+//    default:
+//        //do nothing
+//        break;
+//    }
+//    switch (i) {
+//    case clock0:
+//        NowTime.Hour = byte(Hour);
+//        Clock.write(NowTime);
+//        break;
+//    case FeedTime1:
+//        feed.Hour = byte(Hour);
+//        Clock.setAlarm(feed, 1);
+//        break;
+//    case FeedTime2:
+//        feed.Hour = byte(Hour);
+//        Clock.setAlarm(feed, 2);
+//        break;
+//    default:
+//        NowTime.Hour = byte(Hour);
+//        Clock.write(NowTime);
+//        break;
+//    }
+//
+//}
+//
+//
+//void changeMinute(byte i, bool increment) {
+//    AlarmTime feed;
+//    DateTime NowTime;            //create DateTime struct from Library
+//    int Minute;
+//
+//   switch (i) {
+//    case clock0:
+//        NowTime = Clock.read();        // get the latest clock values
+//        Minute = NowTime.Minute;
+//        break;
+//    case FeedTime1:
+//        feed = Clock.readAlarm(FeedTime1);
+//        Minute = feed.Minute;
+//        break;
+//    case FeedTime2:
+//        feed = Clock.readAlarm(FeedTime2);
+//        Minute = feed.Minute;
+//        break;
+//    default:
+//        NowTime = Clock.read();        // get the latest clock values
+//        Minute = NowTime.Minute;
+//        break;
+//    }
+//    if (increment == true) {
+//        Minute += 1;
+//        Minute %= 60;
+//    }
+//    else {
+//        Minute -= 1;
+//        Minute %= 60;
+//    }
+//
+//    if (Minute < 0) { Minute = 59; }
+//    switch (i) {
+//    case clock0:
+//        NowTime.Minute = byte(Minute);
+//        Clock.write(NowTime);
+//        break;
+//    case FeedTime1:
+//        feed.Minute = byte(Minute);
+//        Clock.setAlarm(feed, 1);
+//        break;
+//    case FeedTime2:
+//        feed.Minute = byte(Minute);
+//        Clock.setAlarm(feed, 2);
+//        break;
+//    default:
+//        NowTime.Minute = byte(Minute);
+//        Clock.write(NowTime);
+//        break;
+//    }
+//
+//}
+//
+//
+//void changeClockMode(byte i, bool increment) {
+//    AlarmTime feed;
+//    DateTime NowTime = Clock.read();     //create DateTime struct from Library
+//    int ClockMode = NowTime.ClockMode;   //int is able to be negative
+//
+//    switch (i) {
+//    case clock0:
+//        if (increment == true) {
+//            ClockMode += 1;
+//            ClockMode %= 3;
+//        }
+//        else {
+//            ClockMode -= 1;
+//            ClockMode %= 3;
+//        }
+//        if (ClockMode < 0) { ClockMode = 2; }
+//        NowTime.ClockMode = byte(ClockMode);
+//        Clock.write(NowTime);
+//        fixFeedTimeClockMode(FeedTime1, NowTime.ClockMode);
+//        fixFeedTimeClockMode(FeedTime2, NowTime.ClockMode);
+//        break;
+//    case FeedTime1:
+//    case FeedTime2:
+//        if (ClockMode != M24hr) {
+//            feed = Clock.readAlarm(i);
+//            if (feed.ClockMode == AMhr) {
+//                feed.ClockMode = PMhr;
+//            }
+//            else {
+//                feed.ClockMode = AMhr;
+//            }
+//            Clock.setAlarm(feed, i);
+//        } //else do nothing
+//        break;
+//    default:
+//        //do nothing
+//        break;
+//    }
+//}
+//
+//
+//void changeTemp() {
+//    Fahrenheit = !Fahrenheit;  //change the temperature to F or C
+//    CurrentTemperature = getTemperatureValue();
+//    RunTime = millis();
+//    displayClock(true);
+//}
+//
+//
+//void changeAmtOfFood(bool increment) {
+//    float weight = 0.5;
+//      if(increment == true){
+//          weight += 0.5;
+//        }
+//      else {weight -= 0.5;}
+//}
+//
+//
+//void changeAlarmMode(byte i, bool increment) {
+//    // Change AlarmMode to 0=Daily, 1=Weekday, 2=Weekend, 3=Once
+//
+//        AlarmTime feed = Clock.readAlarm(i);
+//        int AlarmMode = feed.AlarmMode;
+//
+//        if (increment == true) {
+//            AlarmMode += 1;
+//            AlarmMode %= 4;
+//        }
+//        else {
+//            AlarmMode -= 1;
+//            AlarmMode %= 4;
+//        }
+//
+//        if (AlarmMode < 0) { AlarmMode = 3; }
+//        feed.AlarmMode = byte(AlarmMode);
+//        Clock.setAlarm(feed, i);
+//}
+//
+//
 void ButtonHold(Button& b) {
     // PowerLoss, ShowClock, ShowFeedTime1, ShowFeedTime2, Feeding, EditClock, EditFeedTime1, EditFeedTime2
 
@@ -1028,7 +1035,6 @@ void displayClock(bool changeFlag = false) {
      *              - false does nothing
      */
 
-    unsigned int distance = sonar.ping_cm();  //ping in cm
     DateTime NowTime;            //create DateTime struct from Library
     NowTime = Clock.read();      // get the latest clock values
 
@@ -1082,16 +1088,17 @@ void displayClock(bool changeFlag = false) {
         lcd.setCursor(0, 1);                       // Column, Row
         lcd.print("Nxt Feed ");          // amount of food remaining in the container
 
-        displayNextFeed();                                         
+        //displayNextFeed(FeedTime1);
+        lcd.setCursor(14, 1);                                         
         lcd.write(4);                             //Skinny letter F
         lcdAlarmIndicator();                      //lcd.print A1, A2, BA, or -
 
         PreviousTime = Clock.read();
     }
 
-    if(distance < maxDistance ){  //and feed plate is empty
-        feederDoor();
-      }
+//    if(distConfirmed ){  //and feed plate is empty
+//        feederDoor();
+//      }
 }
 
 
@@ -1124,42 +1131,41 @@ void lcdAlarmIndicator() {
 }
 
 
-void toggleLEDred(bool ledON = true) {
-    unsigned int distance = sonar.ping_cm(); // Ping in cm
-    bool ledState;
-
-    ledState = digitalRead(redLedPin);                //get the state of LED
-    if (ledON == true) {
-        digitalWrite(redLedPin, !ledState);           //do the opposite
-    }
-    else {
-        digitalWrite(redLedPin, LOW);
-    }
-    if(distance < maxDistance){ digitalWrite(redLedPin, LOW); }
-}
-
-
-void toggleBuzzer() {
-    int thisNote;
-    unsigned int distance = sonar.ping_cm(); // Ping in cm
-
-       if(distance >= maxDistance){ 
-        for(thisNote = 0;thisNote < 5;thisNote++){ 
-          int noteDuration = 1000 / noteDurations[thisNote];  // to calculate the note duration, take one second divided by the note type. e.g. quarter note = 1000 / 4,
-          tone(buzzerPin, melody[thisNote], noteDuration);
-
-          int pauseBetweenNotes = noteDuration * 1.30;  //to distinguish the notes, set a minimum time between them. the note's duration + 30% seems to work well:
-          delay(pauseBetweenNotes);
-        }
-       }
-       else { noTone(buzzerPin); }  //stop the buzzer               
-}
+//void toggleLEDred(bool ledON = true) {
+//    bool ledState;
+//
+//    ledState = digitalRead(redLedPin);                //get the state of LED
+//    if (ledON == true) {
+//        digitalWrite(redLedPin, !ledState);           //do the opposite
+//    }
+//    else {
+//        digitalWrite(redLedPin, LOW);
+//    }
+//    if(distConfirmed){ digitalWrite(redLedPin, LOW); }
+//}
+//
+//
+//void toggleBuzzer() {
+//    int thisNote;    
+//
+//       if(!distConfirmed){ 
+//        for(thisNote = 0;thisNote < 5;thisNote++){ 
+//          int noteDuration = 1000 / noteDurations[thisNote];  // to calculate the note duration, take one second divided by the note type. e.g. quarter note = 1000 / 4,
+//          tone(buzzerPin, melody[thisNote], noteDuration);
+//
+//          int pauseBetweenNotes = noteDuration * 1.30;  //to distinguish the notes, set a minimum time between them. the note's duration + 30% seems to work well:
+//          delay(pauseBetweenNotes);
+//        }
+//       }
+//       else { noTone(buzzerPin); }  //stop the buzzer               
+//}
 
 
-void editClock(byte i) {
+void editClock(byte i) {  
     //First Row  hh:mm AM ###.#°F
     //Second Row dow mm/dd/yyyyA^
-    //                             hh    mm    AM     F    
+    //                             hh    mm    AM     F  
+      
     byte cursorPositions[][2] = { {1,0},{4,0},{7,0},{15,0} };
     lcd.setCursor(cursorPositions[i][0], cursorPositions[i][1]);
     lcd.cursor();
@@ -1178,68 +1184,84 @@ void editFeedTime(byte i) {
 }
 
 
-byte CheckFeedTimeStatus() {
-    /* Returns:
-     0 - No alarms
-     1 - Alarm 1 enabled
-     2 - Alarm 2 enabled
-     3 - Both alarms enabled
-    */
-    bool FeedTimeStatus = digitalRead(SQW_Pin);
-    byte flaggedFeedTimes = Clock.flaggedAlarms();
+//byte CheckFeedTimeStatus() {
+//    /* Returns:
+//     0 - No alarms
+//     1 - Alarm 1 enabled
+//     2 - Alarm 2 enabled
+//     3 - Both alarms enabled
+//    */
+//    bool FeedTimeStatus = digitalRead(SQW_Pin);
+//    byte flaggedFeedTimes = Clock.flaggedAlarms();
+//
+//    //INTSQW is Active-Low Interrupt
+//    if (FeedTimeStatus == LOW) {       
+//        FeederState = Feeding;  //feeding alarm detected
+//    }
+//    return flaggedFeedTimes;
+//}
+//
+//
+//void fixFeedTimeClockMode(byte FeedTimeIndex, byte NewClockMode) {
+//    /** ********************************************************
+//     * Fixes feedTime clockmode if clock.clockmode is switch
+//     * between 12hr and 24hr clockmodes
+//     ********************************************************* */
+//     
+//    AlarmTime feed = Clock.readAlarm(FeedTimeIndex);
+//
+//        if (feed.Hour > 12) {
+//            feed.ClockMode = PMhr;
+//        }
+//        else {
+//            feed.ClockMode = AMhr;
+//        }
+//        feed.Hour %= 12;
+//        if (feed.Hour == 0) { feed.Hour = 12; }
+//    
+//    else if (NewClockMode == M24hr) {
+//        feed.Hour %= 12;
+//        feed.Hour += (12 * feed.ClockMode);
+//        feed.ClockMode = M24hr;
+//    }
+//    Clock.setAlarm(feed, FeedTimeIndex);
+//
+//}
+//
+//
+//void displayNextFeed(byte i){
+//      DateTime NowTime;   
+//      NowTime = Clock.read();
+//       
+//      AlarmTime feed;
+//      
+//      if (feed.Enabled){
+//          if(i == 1){
+//           feed = Clock.readAlarm(FeedTime1);
+//         }
+//         else{
+//           feed = Clock.readAlarm(FeedTime2);
+//          }
+//      }
+//      else {
+//        //write the word null on the screen
+//      }
+//  
+//}
 
-    //INTSQW is Active-Low Interrupt
-    if (FeedTimeStatus == LOW) {       
-        FeederState = Feeding;  //feeding alarm detected
-    }
-    return flaggedFeedTimes;
-}
 
-
-void fixFeedTimeClockMode(byte FeedTimeIndex, byte NewClockMode) {
-    /** ********************************************************
-     * Fixes feedTime clockmode if clock.clockmode is switch
-     * between 12hr and 24hr clockmodes
-     ********************************************************* */
-     
-    AlarmTime feed = Clock.readAlarm(FeedTimeIndex);
-
-        if (feed.Hour > 12) {
-            feed.ClockMode = PMhr;
-        }
-        else {
-            feed.ClockMode = AMhr;
-        }
-        feed.Hour %= 12;
-        if (feed.Hour == 0) { feed.Hour = 12; }
-    
-    else if (NewClockMode == M24hr) {
-        feed.Hour %= 12;
-        feed.Hour += (12 * feed.ClockMode);
-        feed.ClockMode = M24hr;
-    }
-    Clock.setAlarm(feed, FeedTimeIndex);
-
-}
-
-
-void displayNextFeed(){
-   
-}
-
-
-void showAmtOfFood(){
-  
-}
-
-
-void feederDoor(){
- unsigned int distance = sonar.ping_cm(); // Ping in cm
-
-    if(distance < maxDistance){  //and feed plate empty
-      
-      }
-}
+//void showAmtOfFood(){
+//  
+//}
+//
+//
+//void feederDoor(){
+// 
+//
+//    if(distConfirmed){  //and feed plate empty
+//      
+//      }
+//}
 
 
 void welcome() {
@@ -1364,7 +1386,14 @@ void welcome() {
 }
 
 
-
+//bool checkDistance(){
+//  unsigned int distance = sonar.ping_cm(); // Ping in cm
+//    
+//     if (distance < maxDistance){
+//      return true;
+//     }
+//     else{ return false;}
+//}
 
 /*
  * 
