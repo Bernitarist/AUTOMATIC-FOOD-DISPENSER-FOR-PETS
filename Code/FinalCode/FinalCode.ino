@@ -1382,7 +1382,112 @@ void welcome() {
     lcd.write(byte(7));
 }
 
+void DisplayNextFeed(){
+  unsigned int timeRem;
+  byte smallh[8] = {
+              0b00000,
+              0b10000,
+              0b10000,
+              0b10000,
+              0b11100,
+              0b10100,
+              0b10100,
+              0b00000 };
 
+  lcd.createChar(0, smallh);
+
+    DateTime NowTime;            
+    NowTime = Clock.read(); 
+    AlarmTime alarm;
+
+  struct TIME
+{
+    int minutes;
+    int hours;
+};
+    struct TIME alm1, alm2, difference,chk1,chk2;
+   
+          //alarm1 values
+     alarm = Clock.readAlarm(alarm1);
+     alm1.hours = alarm.Hour;
+     alm1.minutes = alarm.Minute;
+  
+          //alarm2 values
+    alarm = Clock.readAlarm(alarm2);
+     alm2.hours = alarm.Hour;
+     alm2.minutes = alarm.Minute;
+
+            //clock values
+    int clockHr = NowTime.Hour;
+    int clockMin = NowTime.Minute;
+    
+          
+          //time difference calculation
+   if((NowTime.ClockMode == AMhr && clockHr >= alm1.hours) || (NowTime.ClockMode == PMhr && clockHr < alm2.hours) || (clockHr == alm2.hours && NowTime.ClockMode == PMhr && clockMin < alm2.minutes) ||
+                                                                                                                                                            (NowTime.ClockMode == PMhr && clockHr == 12)){
+              if(alm2.minutes < clockMin){
+                --alm2.hours;
+                alm2.minutes += 60;
+                difference.minutes = alm2.minutes - clockMin; 
+              }
+              else{difference.minutes = alm2.minutes - clockMin;}
+              if(alm2.hours < clockHr){
+                alm2.hours += 12;
+                difference.hours = alm2.hours- clockHr; 
+              }
+              else{difference.hours = alm2.hours - clockHr;}
+
+                  lcd.setCursor(9, 1);
+                  lcd.print(p2Digits(difference.hours));
+                  lcd.write(byte(0));
+                  lcd.print(p2Digits(difference.minutes));
+                  lcd.print("m");
+
+                 
+     }
+      if(NowTime.ClockMode == AMhr && clockHr < alm1.hours || clockHr == 12 && NowTime.ClockMode == AMhr){
+              if(alm1.minutes < clockMin){
+                --alm1.hours;
+                alm1.minutes += 60;
+                difference.minutes = alm1.minutes - clockMin; 
+              }
+              else{difference.minutes = alm1.minutes - clockMin;}
+              if(alm1.hours < clockHr){
+                alm1.hours += 12;
+                difference.hours = alm1.hours - clockHr;
+              }
+                else{difference.hours = alm1.hours - clockHr;} 
+
+                  lcd.setCursor(9, 1);
+                  lcd.print(p2Digits(difference.hours));
+                  lcd.write(byte(0));
+                  lcd.print(p2Digits(difference.minutes));
+                  lcd.print("m");
+
+                  
+     }
+     if(NowTime.ClockMode == PMhr && clockHr > alm2.hours || (clockHr == alm2.hours && NowTime.ClockMode == PMhr && clockMin > alm2.minutes) ){
+            alm1.hours += 24;
+            clockHr += 12;
+                if(alm1.minutes < clockMin){
+                      --alm1.hours;
+                      alm1.minutes += 60;
+                      difference.minutes = alm1.minutes - clockMin;
+                }
+                else{difference.minutes = alm1.minutes - clockMin;}
+
+                difference.hours = alm1.hours - clockHr;
+                  
+                  lcd.setCursor(9, 1);
+                  lcd.print(p2Digits(difference.hours));
+                  lcd.write(byte(0));
+                  lcd.print(p2Digits(difference.minutes));
+                  lcd.print("m");
+                 
+     }
+
+
+}
 //bool checkDistance(){
 //  unsigned int distance = sonar.ping_cm(); // Ping in cm
 //    
