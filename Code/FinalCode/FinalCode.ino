@@ -4,12 +4,13 @@
   
 #include <SimpleAlarmClock.h>         
 #include <LiquidCrystal_I2C.h>
-#include <Button.h>                   
+#include <Button.h>  
+#include "HX711.h"                 
 #include "pitches.h"
 
-#define TRIGGER_PIN 6
-#define ECHO_PIN 6
-#define MAX_DISTANCE 400
+#define calibration_factor 213.0 
+#define DOUT  6
+#define CLK  5
 
   /* ***********************************************************
    *                      Global Constants                     *
@@ -30,6 +31,7 @@ const int Rt_Pin = 10;
 const int DebouceTime = 30;               // button debouce time in ms
      
 SimpleAlarmClock Clock(RTC_addr, EEPROM_addr, INTCN);  // SimpleAlarmClock object
+HX711 scale;
 
 Button SnoozeKey(Snooze_Pin, BUTTON_PULLUP_INTERNAL, true, DebouceTime);
 Button LtKey(Lt_Pin, BUTTON_PULLUP_INTERNAL, true, DebouceTime);
@@ -104,7 +106,8 @@ byte ActiveAlarms = 0;            // used to store active alarms (not enabled al
 bool bHoldButtonFlag = false;     // used to prevent holdButton also activating clickButton
 bool bDisplayStatus = true;       // used to track the lcd display on status
 unsigned int MaxAmtfood = 5000;
-unsigned int feedRem;
+float feedRem;
+float prevAmt;
 
 
 //custom LCD characters
@@ -751,27 +754,31 @@ void changeYear(byte i = 0, bool increment = true) {
 }
 
 void changeFeedAmt(bool increment = true){
+
+      float maxAmt = 5000;
+      float minAmt = 1000;
  
     if (increment == true) { MaxAmtfood += 1000; }
     else { MaxAmtfood -= 1000; }
 
-      if (MaxAmtfood < 1000) { MaxAmtfood = 5000; }
-    if (MaxAmtfood > 5000) { MaxAmtfood = 1000; }
+      if (MaxAmtfood < 1000) { MaxAmtfood = maxAmt; }
+    if (MaxAmtfood > 5000) { MaxAmtfood = minAmt; }
+
+    lcd.setCursor(0,1);
+    lcd.print(MaxAmtfood);
+
 }
 
 void foodParam(bool change = false){
-   
-  feedRem = MaxAmtfood - 100;
+     
+  if (change == true){
   lcd.clear();
   lcd.setCursor(0,0);
-  lcd.print("Set maxAmt ");
+  lcd.print("Set Max Feed Amt ");
+  lcd.setCursor(0,1);
   lcd.print(Amt2Digits(MaxAmtfood));
   lcd.print("g");
-
-  lcd.setCursor(0,1);
-  lcd.print("Feed Amt ");
-  lcd.print(Amt2Digits(feedRem));
-  lcd.print("g"); 
+  }
   
 }
 
@@ -917,7 +924,8 @@ void editAlarm(byte i = 0) {
 void showAmtOfFood(bool changeFlag = false){
        
         DateTime NowTime;   
-        NowTime = Clock.read();    
+        NowTime = Clock.read(); 
+        feedRem = MaxAmtfood - scale.get_units(10);   
 
     if (NowTime.Day != PreviousTime.Day) { changeFlag = true; }
     if (NowTime.Month != PreviousTime.Month) { changeFlag = true; }
@@ -940,13 +948,17 @@ void showAmtOfFood(bool changeFlag = false){
         lcd.setCursor(0, 1); 
         lcd.print("Feed Amt ");  
         lcd.print(Amt2Digits(feedRem)); 
-        lcd.print("g");  
+        lcd.print("g"); 
+
+        MaxAmtfood = feedRem;
             }
 }
 
 void editFeedAmt(byte i = 0) {
 
-    lcd.setCursor(14,0);
+    byte cursorPositions[][2] = { {3,1} };
+
+    lcd.setCursor(cursorPositions[i][0], cursorPositions[i][1]);
     lcd.cursor();
     lcd.blink();
 }
@@ -1629,6 +1641,10 @@ void setup() {
         ClockState = PowerLoss;
     }
     CurrentTemperature = getTemperatureValue();
+
+   scale.begin(DOUT, CLK);
+   scale.set_scale(calibration_factor); 
+   scale.tare(); 
 
     /*  Button callback functions   */
     LtKey.clickHandler(ButtonClick);
