@@ -6,7 +6,6 @@
 #include <LiquidCrystal_I2C.h>
 #include <Button.h>                   
 #include "pitches.h"
-#include <NewPing.h>
 
 #define TRIGGER_PIN 6
 #define ECHO_PIN 6
@@ -31,7 +30,6 @@ const int Rt_Pin = 10;
 const int DebouceTime = 30;               // button debouce time in ms
      
 SimpleAlarmClock Clock(RTC_addr, EEPROM_addr, INTCN);  // SimpleAlarmClock object
-NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE);
 
 Button SnoozeKey(Snooze_Pin, BUTTON_PULLUP_INTERNAL, true, DebouceTime);
 Button LtKey(Lt_Pin, BUTTON_PULLUP_INTERNAL, true, DebouceTime);
@@ -41,7 +39,7 @@ const int LED_Pin = 13;                 // digital pin for LED
 const int greenLed = 8;                 // digital pin for LED
 const int BUZZER_Pin = 7;              // digital pin for tone buzzer
 const int SQW_Pin = 2;                  // Interrrupt pin
-const int Button_Hold_Time = 3000;      // button hold length of time in ms
+const int Button_Hold_Time = 2000;      // button hold length of time in ms
 const int Alarm_View_Pause = 2000;      // View Alarm Length of time in ms
 const int FeedAmtPauseTime = 3000;
 const byte SnoozePeriod = 9;            // Snooze value, in minutes
@@ -105,6 +103,8 @@ byte cpIndex = 0;                 // Cursor Position Index - used for edit mode
 byte ActiveAlarms = 0;            // used to store active alarms (not enabled alarms)
 bool bHoldButtonFlag = false;     // used to prevent holdButton also activating clickButton
 bool bDisplayStatus = true;       // used to track the lcd display on status
+unsigned int MaxAmtfood = 5000;
+unsigned int feedRem;
 
 
 //custom LCD characters
@@ -750,9 +750,29 @@ void changeYear(byte i = 0, bool increment = true) {
     Clock.write(NowTime);
 }
 
-void changeFeedAmt(byte i = 0, bool increment = true){
+void changeFeedAmt(bool increment = true){
+ 
+    if (increment == true) { MaxAmtfood += 1000; }
+    else { MaxAmtfood -= 1000; }
 
-      
+      if (MaxAmtfood < 1000) { MaxAmtfood = 5000; }
+    if (MaxAmtfood > 5000) { MaxAmtfood = 1000; }
+}
+
+void foodParam(bool change = false){
+   
+  feedRem = MaxAmtfood - 100;
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Set maxAmt ");
+  lcd.print(Amt2Digits(MaxAmtfood));
+  lcd.print("g");
+
+  lcd.setCursor(0,1);
+  lcd.print("Feed Amt ");
+  lcd.print(Amt2Digits(feedRem));
+  lcd.print("g"); 
+  
 }
 
 void fixAlarmClockMode(byte alarmIndex, byte NewClockMode) {
@@ -895,7 +915,7 @@ void editAlarm(byte i = 0) {
 }
 
 void showAmtOfFood(bool changeFlag = false){
-        unsigned int Amtfood = 100;
+       
         DateTime NowTime;   
         NowTime = Clock.read();    
 
@@ -919,15 +939,14 @@ void showAmtOfFood(bool changeFlag = false){
 
         lcd.setCursor(0, 1); 
         lcd.print("Feed Amt ");  
-        lcd.print(Amtfood);
-        lcd.print("g");    
+        lcd.print(Amt2Digits(feedRem)); 
+        lcd.print("g");  
             }
 }
 
 void editFeedAmt(byte i = 0) {
 
-    byte cursorPositions[][2] = { {5,0},{8,0},{13,0},{11,1} };
-    lcd.setCursor(cursorPositions[i][0], cursorPositions[i][1]);
+    lcd.setCursor(14,0);
     lcd.cursor();
     lcd.blink();
 }
@@ -949,27 +968,23 @@ void ButtonClick(Button& b) {
         case PowerLoss:
             ClockState = ShowClock;
             Clock.clearOSFStatus();
-            break;
+        break;
         case ShowClock:
-            switch (b.pinValue()) {
-            case Snooze_Pin: 
-                 toggleShowAmtOfFood();               
-                break;
-                
-            case Lt_Pin:
-                toggleShowAlarm(alarm1);                
-                break;
-                
-            case Rt_Pin:
-                toggleShowAlarm(alarm2);              
-                break;
-                
-            default:
-                //do nothing
-                break;
+                switch (b.pinValue()) {
+                    case Snooze_Pin: 
+                        toggleShowAmtOfFood();               
+                    break;               
+                    case Lt_Pin:
+                        toggleShowAlarm(alarm1);                
+                    break;               
+                    case Rt_Pin:
+                        toggleShowAlarm(alarm2);              
+                    break;               
+                    default:
+                             //do nothing
+                    break;
             }
-            break;
-            //ShowAlarm1 or ShowAlarm2 does nothing
+        break;
         case Alarm:
             //Alarm Mode
             switch (b.pinValue()) {
@@ -988,15 +1003,14 @@ void ButtonClick(Button& b) {
                 //do nothing
                 break;
             }
-            break;
+        break;
         case EditClock:
-            //Edit Clock Mode
             switch (b.pinValue()) {
             case Snooze_Pin:
                 //Increments cursor position
                 cpIndex += 1;
                 cpIndex %= 4;
-                break;
+            break;
             case Lt_Pin:
                 // Decrements value
                 // First Row  hh:mm AM ###.#°F
@@ -1004,51 +1018,46 @@ void ButtonClick(Button& b) {
                 switch (cpIndex) {
                 case 0:
                     changeHour(clock0, false);
-                    break;
+                break;
                 case 1:
                     changeMinute(clock0, false);
-                    break;
+                break;
                 case 2:
                     changeClockMode(clock0, false);
-                    break;
+                break;
                 case 3:
                     changeTemp();
-                    break;
+                break;
                 default:
                     //do nothing
-                    break;
-                }
                 break;
+                }
+            break;
             case Rt_Pin:
-                // Increments value
                 switch (cpIndex) {
                 case 0:
-                    //edit Hours
                     changeHour(clock0, true);
-                    break;
+                break;
                 case 1:
-                    //edit Minute
                     changeMinute(clock0, true);
-                    break;
+                break;
                 case 2:
-                    //edit ClockMode
                     changeClockMode(clock0, true);
-                    break;
+                break;
                 case 3:
-                    //Farenheit
                     changeTemp();
-                    break;
+                break;
                 default:
                     //do nothing
-                    break;
-                }
                 break;
+                }
+            break;
             default:
                 //do nothing
-                break;
-            }
-            //End EditClock
             break;
+            }
+
+        break;
         case EditAlarm1:
             //Edit Alarm1 Mode
             switch (b.pinValue()) {
@@ -1112,7 +1121,7 @@ void ButtonClick(Button& b) {
                 //do nothing
                 break;
             }
-            break;
+        break;
         case EditAlarm2:
             //Edit Alarm2 Mode
             switch (b.pinValue()) {
@@ -1175,60 +1184,27 @@ void ButtonClick(Button& b) {
                 //do nothing
                 break;
             }
-            break;
+        break;
         case EditFeedAmt:
               switch (b.pinValue()){
                 case Snooze_Pin:
-                  cpIndex += 1;
-                  cpIndex %= 4;
-                  break;
-                case Lt_Pin:
-                              // Decrements value      
-                    switch (cpIndex) {
-                        case 0:
-                            changeDay(0, false);
-                        break;
-                        case 1:
-                            changeMonth(clock0, false);
-                        break;
-                        case 2:
-                            changeYear(clock0, false);
-                        break;
-                        case 3:
-                            changeFeedAmt(clock0, false);
-                        break;
-                        default:
-                            //do nothing
-                        break;
-                    }
+                break;
+                case Lt_Pin:    
+                      changeFeedAmt(false);
                  break;
                  case Rt_Pin:
-                    case 0:
-                        changeDay(clock0, true);
-                    break;
-                    case 4:
-                        changeMonth(clock0, true);
-                    break;
-                    case 6:
-                        changeYear(clock0, true);
-                    break;
-                    case 3:
-                        changeFeedAmt(clock0, true);
-                    break;
-                     default:
-                        //do nothing
-                     break;                
+                      changeFeedAmt(true);
+                 break;                
                     }
-                 break;
-        default:
-            //todo
-            break;
+        break;
+        default://clockstates           
+        break;
         }
     }
 }
 
 void ButtonHold(Button& b) {
- 
+    
     if ((millis() - buttonHoldPrevTime) > 2000) {
         switch (ClockState) {
         case PowerLoss:
@@ -1328,6 +1304,22 @@ void ButtonHold(Button& b) {
             }
             break;
         case EditClock:  //Edit Clock
+                  switch (b.pinValue()) {
+                      case Snooze_Pin:
+                          ClockState = EditFeedAmt;
+                          cpIndex = 0;
+                          buttonHoldPrevTime = millis();
+                          bHoldButtonFlag = true;
+                          foodParam(true);
+                      break;
+                      case Lt_Pin:                      
+                      case Rt_Pin:                 
+                      default:
+                      break;
+            }
+              
+        break;
+        case EditFeedAmt: 
             switch (b.pinValue()) {
             case Snooze_Pin:
                 lcd.noBlink();
@@ -1335,6 +1327,7 @@ void ButtonHold(Button& b) {
                 ClockState = ShowClock;
                 buttonHoldPrevTime = millis();
                 bHoldButtonFlag = true;
+                displayClock(true);
                 break;
             case Lt_Pin:
             case Rt_Pin:
@@ -1358,27 +1351,29 @@ void ButtonHold(Button& b) {
                 break;
             }
             break;
+            
         case EditAlarm2:  //Edit Alarm1
             switch (b.pinValue()) {
-            case Snooze_Pin:
-                lcd.noBlink();
-                lcd.noCursor();
-                ClockState = ShowClock;
-                buttonHoldPrevTime = millis();
-                bHoldButtonFlag = true;
-                displayClock(true);
+                case Snooze_Pin:
+                    lcd.noBlink();
+                    lcd.noCursor();
+                    ClockState = ShowClock;
+                    buttonHoldPrevTime = millis();
+                    bHoldButtonFlag = true;
+                    displayClock(true);
                 break;
-            case Lt_Pin:
-            case Rt_Pin:
-            default:
+                case Lt_Pin:
+                case Rt_Pin:
+                default:
                 break;
-            }
+                }
             break;
         default:
             //todo
-            break;
+        break;
         }
     }
+
 }
 
 String dow2Str(byte bDow) {
@@ -1393,6 +1388,24 @@ String p2Digits(int numValue) {
 
     if (numValue < 10) {
         str = "0" + String(numValue);
+    }
+    else {
+        str = String(numValue);
+    }
+    return str;
+}
+
+String Amt2Digits(int numValue) {
+    String str;
+
+    if (numValue < 1000 && numValue >= 100) {
+        str = "0" + String(numValue);
+    }
+    else if (numValue < 100 && numValue >= 10) {
+        str = "00" + String(numValue);
+    }
+    else if (numValue < 10) {
+        str = "000" + String(numValue);
     }
     else {
         str = String(numValue);
@@ -1684,6 +1697,7 @@ void loop() {
             displayClock(true);
         }
     break;
+
     case Alarm:
             displayClock();
         
@@ -1718,7 +1732,7 @@ void loop() {
         break;
     case EditFeedAmt:
          editFeedAmt(cpIndex);
-         showAmtOfFood();
+         foodParam();
         break;
     default:
         displayClock();
