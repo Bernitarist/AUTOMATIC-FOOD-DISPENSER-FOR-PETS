@@ -8,9 +8,13 @@
 #include "HX711.h"                 
 #include "pitches.h"
 
-#define calibration_factor 213.0 
-#define DOUT  6
-#define CLK  5
+#define calibFactor1 215.0 
+#define dout1  6
+#define clk1  5
+
+#define calibFactor2 213.0 
+#define dout2  4
+#define clk2  3
 
   /* ***********************************************************
    *                      Global Constants                     *
@@ -32,6 +36,7 @@ const int DebouceTime = 30;               // button debouce time in ms
      
 SimpleAlarmClock Clock(RTC_addr, EEPROM_addr, INTCN);  // SimpleAlarmClock object
 HX711 scale;
+HX711 pWeight;
 
 Button SnoozeKey(Snooze_Pin, BUTTON_PULLUP_INTERNAL, true, DebouceTime);
 Button LtKey(Lt_Pin, BUTTON_PULLUP_INTERNAL, true, DebouceTime);
@@ -66,11 +71,10 @@ const byte alarm2 = 2;
 /* ***********************************************************
  *                      Global Variables                     *
  * ********************************************************* */
-
- // notes in the melody:
+ 
 int melody[] = {
-    //NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4
-    NOTE_C6, NOTE_C6, NOTE_C6, NOTE_C6, NOTE_C6,
+
+    NOTE_C6, NOTE_C6, NOTE_C6, NOTE_C6, NOTE_C6,  // notes in the melody:
 };
 
 int noteDurations[] = { 16, 16, 16, 16, 16 };  // note durations: 4 = quarter note, 8 = eighth note, etc.
@@ -87,6 +91,19 @@ enum States {
     EditAlarm2,
     EditFeedAmt,
 };
+
+enum petWeight{
+    classA,
+    classB,
+    classC,
+    classD,
+    classE,
+    classF,
+    classG,
+    classH,
+};
+
+petWeight currWeight;
 
 States ClockState = ShowClock;
 States PrevState = EditAlarm2;     // Used for debugging
@@ -107,7 +124,7 @@ bool bHoldButtonFlag = false;     // used to prevent holdButton also activating 
 bool bDisplayStatus = true;       // used to track the lcd display on status
 unsigned int MaxAmtfood = 5000;
 float feedRem;
-float prevAmt;
+
 
 
 //custom LCD characters
@@ -259,7 +276,7 @@ void DisplayNextFeed(){
     
           
           //time difference calculation
-   if((NowTime.ClockMode == AMhr && clockHr >= alm1.hours) || (NowTime.ClockMode == PMhr && clockHr < alm2.hours) || (clockHr == alm2.hours && NowTime.ClockMode == PMhr && clockMin < alm2.minutes) ||
+   if((NowTime.ClockMode == AMhr && clockHr > alm1.hours) || (NowTime.ClockMode == PMhr && clockHr < alm2.hours) || (clockHr == alm2.hours && NowTime.ClockMode == PMhr && clockMin < alm2.minutes) ||
                                                                                                                                                             (NowTime.ClockMode == PMhr && clockHr == 12)){
               if(alm2.minutes < clockMin){
                 --alm2.hours;
@@ -281,7 +298,7 @@ void DisplayNextFeed(){
 
                  
      }
-      if(NowTime.ClockMode == AMhr && clockHr < alm1.hours || clockHr == 12 && NowTime.ClockMode == AMhr){
+      if(NowTime.ClockMode == AMhr && clockHr < alm1.hours || clockHr == 12 && NowTime.ClockMode == AMhr || (NowTime.ClockMode == AMhr && clockHr == alm1.hours && clockMin < alm1.minutes)){
               if(alm1.minutes < clockMin){
                 --alm1.hours;
                 alm1.minutes += 60;
@@ -321,8 +338,6 @@ void DisplayNextFeed(){
                   lcd.print("m");
                  
      }
-
-
 }
 
 void displayAlarm(byte index = 1, bool changeFlag = false) {
@@ -925,7 +940,7 @@ void showAmtOfFood(bool changeFlag = false){
        
         DateTime NowTime;   
         NowTime = Clock.read(); 
-        feedRem = MaxAmtfood - scale.get_units(10);   
+        feedRem = MaxAmtfood - scale.get_units(3);   
 
     if (NowTime.Day != PreviousTime.Day) { changeFlag = true; }
     if (NowTime.Month != PreviousTime.Month) { changeFlag = true; }
@@ -943,12 +958,16 @@ void showAmtOfFood(bool changeFlag = false){
         lcd.print(p2Digits(NowTime.Month));
         lcd.print("/");
         int i = 2000 + NowTime.Year;
-        lcd.print(i);  
+        lcd.print(i);
 
+          if(feedRem < 0){ feedRem = 0;}
+          if(feedRem >= MaxAmtfood){ feedRem = MaxAmtfood;}
+         else{
         lcd.setCursor(0, 1); 
         lcd.print("Feed Amt ");  
         lcd.print(Amt2Digits(feedRem)); 
         lcd.print("g"); 
+         }
 
         MaxAmtfood = feedRem;
             }
@@ -1599,18 +1618,26 @@ void welcome() {
     lcd.write(byte(7));
 }
 
-
+//void feederDoor(){
+//
+//    bool checkAnimal;
+//    if(
+//      if(checkAnimal == false){   ;}
+//      else{
+//          switch 
+//      }
+//}
 
 /* ***********************************************************
  *                         Void Setup                        *
  * ********************************************************* */
 void setup() {
-    // Get the start time
-    RunTime = millis();
+       // Get the start time
+    //RunTime = millis();
 
     Serial.begin(9600);
 
-    /*         Pin Modes            */
+        // Pin Modes 
     pinMode(LED_Pin, OUTPUT);
     digitalWrite(LED_Pin, LOW);
     pinMode(greenLed, OUTPUT);
@@ -1618,7 +1645,7 @@ void setup() {
     pinMode(BUZZER_Pin, OUTPUT);
     digitalWrite(BUZZER_Pin, LOW);
 
-    /*          LCD Stuff and welcome screen          */
+       //LCD Stuff and welcome screen 
     lcd.init();
     lcd.clear();
     lcd.backlight();
@@ -1626,27 +1653,32 @@ void setup() {
       delay(4000);
       lcd.clear();*/
     
-    //Create custom lcd characters
+       //Create custom lcd characters
     lcd.createChar(1, cA1);
     lcd.createChar(2, cA2);
     lcd.createChar(3, cBA);
     
 
-    /*         Clock Stuff          */
+      //Clock Stuff  
     Clock.begin();
 
     if (Clock.getOSFStatus() == true) {
-      
-        //Restart from power loss detected
-        ClockState = PowerLoss;
+          
+        ClockState = PowerLoss;   //Restart from power loss detected
     }
+    
     CurrentTemperature = getTemperatureValue();
 
-   scale.begin(DOUT, CLK);
-   scale.set_scale(calibration_factor); 
+   scale.begin(dout1, clk1);
+   scale.set_scale(calibFactor1); 
    scale.tare(); 
 
-    /*  Button callback functions   */
+    pWeight.begin(dout2, clk2);
+    pWeight.set_scale(calibFactor2); 
+    pWeight.tare();
+
+  
+        //Button callback functions 
     LtKey.clickHandler(ButtonClick);
     LtKey.holdHandler(ButtonHold, Button_Hold_Time);
     RtKey.clickHandler(ButtonClick);
@@ -1654,7 +1686,7 @@ void setup() {
     SnoozeKey.clickHandler(ButtonClick);
     SnoozeKey.holdHandler(ButtonHold, Button_Hold_Time);
 
-    //Display the clock
+        //Display the clock
     displayClock(true);
 
 }
@@ -1664,6 +1696,13 @@ void setup() {
  * ********************************************************* */
 void loop() {
     static long previousMillis = 0;
+
+//    Serial.print(scale.get_units(3),1);
+//    Serial.print(" grams"); 
+//    Serial.print("                  ");
+//    Serial.print(pWeight.get_units(3),1);
+//    Serial.println(" grams");
+    
 
     switch (ClockState) {
     case PowerLoss:
@@ -1731,7 +1770,7 @@ void loop() {
             toggleLED();
             toggleBuzzer();
         }
-         
+            //feederDoor();
         
         break;
     case EditClock:
@@ -1753,7 +1792,7 @@ void loop() {
     default:
         displayClock();
         break;
-    }
+   }
     LtKey.process();
     RtKey.process();
     SnoozeKey.process();
