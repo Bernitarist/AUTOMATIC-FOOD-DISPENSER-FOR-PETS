@@ -4,7 +4,8 @@
   
 #include <SimpleAlarmClock.h>         
 #include <LiquidCrystal_I2C.h>
-#include <Button.h>  
+#include <Button.h>
+#include <Servo.h>   
 #include "HX711.h"                 
 #include "pitches.h"
 
@@ -31,12 +32,14 @@ const bool INTCN = true;                 // allows SQW pin to be monitored
 const int Snooze_Pin = 11;
 const int Lt_Pin = 9;
 const int Rt_Pin = 10;
+const int doorPin = 12;
 
 const int DebouceTime = 30;               // button debouce time in ms
      
 SimpleAlarmClock Clock(RTC_addr, EEPROM_addr, INTCN);  // SimpleAlarmClock object
 HX711 scale;
 HX711 pWeight;
+Servo door;
 
 Button SnoozeKey(Snooze_Pin, BUTTON_PULLUP_INTERNAL, true, DebouceTime);
 Button LtKey(Lt_Pin, BUTTON_PULLUP_INTERNAL, true, DebouceTime);
@@ -46,6 +49,7 @@ const int LED_Pin = 13;                 // digital pin for LED
 const int greenLed = 8;                 // digital pin for LED
 const int BUZZER_Pin = 7;              // digital pin for tone buzzer
 const int SQW_Pin = 2;                  // Interrrupt pin
+
 const int Button_Hold_Time = 2000;      // button hold length of time in ms
 const int Alarm_View_Pause = 2000;      // View Alarm Length of time in ms
 const int FeedAmtPauseTime = 3000;
@@ -124,6 +128,8 @@ bool bHoldButtonFlag = false;     // used to prevent holdButton also activating 
 bool bDisplayStatus = true;       // used to track the lcd display on status
 unsigned int MaxAmtfood = 5000;
 float feedRem;
+float foodBackup;
+int angle = 0;
 
 
 
@@ -937,10 +943,13 @@ void editAlarm(byte i = 0) {
 }
 
 void showAmtOfFood(bool changeFlag = false){
-       
+
+        float prevFeed;
         DateTime NowTime;   
         NowTime = Clock.read(); 
-        feedRem = MaxAmtfood - scale.get_units(3);   
+        
+        foodBackup = MaxAmtfood;
+       // feedRem = foodBackup - scale.get_units(10);   
 
     if (NowTime.Day != PreviousTime.Day) { changeFlag = true; }
     if (NowTime.Month != PreviousTime.Month) { changeFlag = true; }
@@ -962,14 +971,26 @@ void showAmtOfFood(bool changeFlag = false){
 
           if(feedRem < 0){ feedRem = 0;}
           if(feedRem >= MaxAmtfood){ feedRem = MaxAmtfood;}
-         else{
-        lcd.setCursor(0, 1); 
-        lcd.print("Feed Amt ");  
-        lcd.print(Amt2Digits(feedRem)); 
-        lcd.print("g"); 
+         if((scale.get_units(5)) > 7){
+            feedRem = foodBackup - scale.get_units(5);
+            lcd.setCursor(0, 1); 
+            lcd.print("Feed Amt ");  
+            lcd.print(Amt2Digits(feedRem)); 
+            lcd.print("g"); 
+            
+           
          }
+         foodBackup = feedRem; 
+          prevFeed = feedRem;
+        if((scale.get_units(5)) < 7){
+            lcd.setCursor(0, 1); 
+            lcd.print("Feed Amt ");  
+            lcd.print(Amt2Digits(prevFeed)); 
+            lcd.print("g");
+        }
+         
 
-        MaxAmtfood = feedRem;
+       // 
             }
 }
 
@@ -1620,12 +1641,39 @@ void welcome() {
 
 //void feederDoor(){
 //
-//    bool checkAnimal;
-//    if(
-//      if(checkAnimal == false){   ;}
-//      else{
-//          switch 
-//      }
+//int minAngle = 0;
+//int maxAngle = 180;
+//
+//    if((pWeight.get_units(5)) > 9){
+//
+//        switch(currWeight){
+//            case classA:
+//              if((pWeight.get_units(5)) > 7 && (pWeight.get_units(5)) < 10){
+//                  if((scale.get_units(5)) < 12){
+//                    door.write(maxAngle);
+//                  }
+//                  door.write(minAngle);                  
+//              }
+//              
+//            break;
+//            case classB:
+//            break;
+//            case classC:
+//            break;
+//            case classD:
+//            break;
+//            case classE:
+//            break;
+//            case classF:
+//            break;
+//            case classG:
+//            break;
+//            case classH:
+//            break;
+//            default:
+//            break;
+//        }
+//    }
 //}
 
 /* ***********************************************************
@@ -1633,7 +1681,7 @@ void welcome() {
  * ********************************************************* */
 void setup() {
        // Get the start time
-    //RunTime = millis();
+    RunTime = millis(); 
 
     Serial.begin(9600);
 
@@ -1669,13 +1717,15 @@ void setup() {
     
     CurrentTemperature = getTemperatureValue();
 
-   scale.begin(dout1, clk1);
-   scale.set_scale(calibFactor1); 
-   scale.tare(); 
+   pWeight.begin(dout1, clk1);
+   pWeight.set_scale(calibFactor1); 
+   pWeight.tare(); 
 
-    pWeight.begin(dout2, clk2);
-    pWeight.set_scale(calibFactor2); 
-    pWeight.tare();
+    scale.begin(dout2, clk2);
+    scale.set_scale(calibFactor2); 
+    scale.tare();
+
+//     door.attach(doorPin);
 
   
         //Button callback functions 
@@ -1697,10 +1747,10 @@ void setup() {
 void loop() {
     static long previousMillis = 0;
 
-//    Serial.print(scale.get_units(3),1);
-//    Serial.print(" grams"); 
+//    Serial.print(scale.get_units(5),1);
+//    Serial.println(" grams"); 
 //    Serial.print("                  ");
-//    Serial.print(pWeight.get_units(3),1);
+//    Serial.print(pWeight.get_units(10),1);
 //    Serial.println(" grams");
     
 
@@ -1721,6 +1771,7 @@ void loop() {
         }
         break;
     case ShowClock:
+        door.write(angle); 
         displayClock();
         break;
     case ShowAlarm1:
@@ -1769,8 +1820,9 @@ void loop() {
             digitalWrite(greenLed, LOW);
             toggleLED();
             toggleBuzzer();
+//            feederDoor();
         }
-            //feederDoor();
+            
         
         break;
     case EditClock:
