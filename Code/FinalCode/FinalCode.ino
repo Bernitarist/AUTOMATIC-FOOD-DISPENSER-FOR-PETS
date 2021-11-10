@@ -9,7 +9,7 @@
 #include "HX711.h"                 
 #include "pitches.h"
 
-#define calibFactor1 215.0 
+#define calibFactor1 214.0 
 #define dout1  6
 #define clk1  5
 
@@ -90,6 +90,7 @@ enum States {
     ShowAlarm2,
     ShowFeedAmt,
     Alarm,
+    DoorOpening,
     EditClock,
     EditAlarm1,
     EditAlarm2,
@@ -119,6 +120,8 @@ float CurrentTemperature;         // Maybe move as static variable under display
 unsigned long RunTime;            // Used to track time between get temperature value
 unsigned long buttonHoldPrevTime = 0.0;  // Used to track button hold times 
 unsigned long AlarmRunTime;
+unsigned long doorStartTime = 0;
+unsigned long doorInterval = 12;
 DateTime PreviousTime;            // Maybe move as static variable under displayClock function
 AlarmTime PreviousAlarm;          // Maybe move as static variable under displayAlarm function
 byte EditHourType = 0;            // 0=AM, 1=PM, 2=24hour - used for edit only
@@ -129,9 +132,8 @@ bool bDisplayStatus = true;       // used to track the lcd display on status
 unsigned int MaxAmtfood = 5000;
 float feedRem;
 float foodBackup;
+bool animalPresent;
 int angle = 0;
-
-
 
 //custom LCD characters
 //Up arrow
@@ -885,7 +887,80 @@ void toggleBuzzer() {
     }
 }
 
+//void feederDoor(bool animalPresent = false){
+//
+//unsigned long currTime;
+//bool pRange;
+//bool fRange;
+//        if(animalPresent == true){
+//        switch(currWeight){
+//            case classA:
+//            currTime = millis();
+//            if((millis() - currTime) <= doorInterval){
+//                 lcd.clear();
+//                 lcd.setCursor(0,0);
+//                 lcd.print("Feeding...");
+//                 
+//                 if((pWeight.get_units(2)) > 8 && (pWeight.get_units(2)) < 10){pRange = true;} 
+//                 if((scale.get_units(2)) <= 12){fRange = true; } 
+//                 if((scale.get_units(2)) > 12){fRange = false; pRange = false;} 
+//                 
+//                 if(pRange == true && fRange == true){door.write(180);}
+//                 if(fRange == false && pRange == false){door.write(angle); }
+//               }
+//               ClockState = ShowClock;        
+//            break;
+//            case classB:
+//            break;
+//            case classC:
+//            break;
+//            case classD:
+//            break;
+//            case classE:
+//            break;
+//            case classF:
+//            break;
+//            case classG:
+//            break;
+//            case classH:
+//            break;
+//            default:
+//            break;
+//        }
+//        }
+//    
+//}
+
+void openDoor(){
+ 
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("Feeding...");
+
+    door.write(180);
+        if((pWeight.get_units(5)) > 8 && (pWeight.get_units(5)) < 14){
+          closeDoor(0);
+        }
+}
+
+void closeDoor(const byte animalWeight){
+
+    switch (animalWeight){
+        case 0:
+            if((scale.get_units(5)) >= 11){
+                  door.write(0);
+                  
+            }
+           
+        break;
+        default:
+        break;
+    }
+     ClockState = ShowClock; 
+}
+
 void Snooze() {
+  ClockState = ShowClock;
     switch (ActiveAlarms) {
     case 0:
         //No flagged alarms
@@ -909,6 +984,7 @@ void Snooze() {
     }
     toggleLED(false);                  // Confirm LED turned off
     lcd.display();                     // Just in case it was off
+
 }
 
 void clearAlarms() {
@@ -1639,42 +1715,16 @@ void welcome() {
     lcd.write(byte(7));
 }
 
-//void feederDoor(){
-//
-//int minAngle = 0;
-//int maxAngle = 180;
-//
-//    if((pWeight.get_units(5)) > 9){
-//
-//        switch(currWeight){
-//            case classA:
-//              if((pWeight.get_units(5)) > 7 && (pWeight.get_units(5)) < 10){
-//                  if((scale.get_units(5)) < 12){
-//                    door.write(maxAngle);
-//                  }
-//                  door.write(minAngle);                  
-//              }
-//              
-//            break;
-//            case classB:
-//            break;
-//            case classC:
-//            break;
-//            case classD:
-//            break;
-//            case classE:
-//            break;
-//            case classF:
-//            break;
-//            case classG:
-//            break;
-//            case classH:
-//            break;
-//            default:
-//            break;
-//        }
-//    }
-//}
+void checkAnimal(){
+  
+   if((pWeight.get_units(5)) > 9){animalPresent = true;}
+
+    if(animalPresent == true){
+          Snooze();
+          ClockState = DoorOpening;
+        }
+
+}
 
 /* ***********************************************************
  *                         Void Setup                        *
@@ -1725,7 +1775,9 @@ void setup() {
     scale.set_scale(calibFactor2); 
     scale.tare();
 
-//     door.attach(doorPin);
+     door.attach(doorPin);
+     door.write(angle);
+    
 
   
         //Button callback functions 
@@ -1747,10 +1799,10 @@ void setup() {
 void loop() {
     static long previousMillis = 0;
 
-//    Serial.print(scale.get_units(5),1);
-//    Serial.println(" grams"); 
+//    Serial.print(pWeight.get_units(2),1);
+//    Serial.print(" grams"); 
 //    Serial.print("                  ");
-//    Serial.print(pWeight.get_units(10),1);
+//    Serial.print(scale.get_units(2),1);
 //    Serial.println(" grams");
     
 
@@ -1771,7 +1823,6 @@ void loop() {
         }
         break;
     case ShowClock:
-        door.write(angle); 
         displayClock();
         break;
     case ShowAlarm1:
@@ -1820,10 +1871,8 @@ void loop() {
             digitalWrite(greenLed, LOW);
             toggleLED();
             toggleBuzzer();
-//            feederDoor();
-        }
-            
-        
+            checkAnimal();
+        }        
         break;
     case EditClock:
         editClock(cpIndex);
@@ -1841,6 +1890,9 @@ void loop() {
          editFeedAmt(cpIndex);
          foodParam();
         break;
+    case DoorOpening:
+          openDoor();
+    break;
     default:
         displayClock();
         break;
