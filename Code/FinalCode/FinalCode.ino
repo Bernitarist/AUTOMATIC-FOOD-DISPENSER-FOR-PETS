@@ -97,21 +97,8 @@ enum States {
     EditFeedAmt,
 };
 
-enum petWeight{
-    classA,
-    classB,
-    classC,
-    classD,
-    classE,
-    classF,
-    classG,
-    classH,
-};
-
-petWeight currWeight;
-
 States ClockState = ShowClock;
-States PrevState = EditAlarm2;     // Used for debugging
+States PrevState = EditAlarm2;  
 
 byte HourType = 0;                // 0=AM/PM, 1=24hour - used in display alarm - to be deleted
 bool Fahrenheit = true;           // Or Celsius=false
@@ -121,7 +108,7 @@ unsigned long RunTime;            // Used to track time between get temperature 
 unsigned long buttonHoldPrevTime = 0.0;  // Used to track button hold times 
 unsigned long AlarmRunTime;
 unsigned long doorStartTime = 0;
-unsigned long doorInterval = 12;
+unsigned long doorInterval = 500;
 DateTime PreviousTime;            // Maybe move as static variable under displayClock function
 AlarmTime PreviousAlarm;          // Maybe move as static variable under displayAlarm function
 byte EditHourType = 0;            // 0=AM, 1=PM, 2=24hour - used for edit only
@@ -244,6 +231,7 @@ void displayClock(bool changeFlag = false) {
 }
 
 void DisplayNextFeed(){
+  
   unsigned int timeRem;
   byte smallh[8] = {
               0b00000,
@@ -284,8 +272,8 @@ void DisplayNextFeed(){
     
           
           //time difference calculation
-   if((NowTime.ClockMode == AMhr && clockHr > alm1.hours) || (NowTime.ClockMode == PMhr && clockHr < alm2.hours) || (clockHr == alm2.hours && NowTime.ClockMode == PMhr && clockMin < alm2.minutes) ||
-                                                                                                                                                            (NowTime.ClockMode == PMhr && clockHr == 12)){
+   if((NowTime.ClockMode == AMhr && clockHr > alm1.hours) || (NowTime.ClockMode == AMhr && clockHr == alm1.hours && clockMin > alm1.minutes) || (NowTime.ClockMode == PMhr && clockHr < alm2.hours) 
+          || (clockHr == alm2.hours && NowTime.ClockMode == PMhr && clockMin < alm2.minutes) ||(NowTime.ClockMode == PMhr && clockHr == 12)){
               if(alm2.minutes < clockMin){
                 --alm2.hours;
                 alm2.minutes += 60;
@@ -349,33 +337,8 @@ void DisplayNextFeed(){
 }
 
 void displayAlarm(byte index = 1, bool changeFlag = false) {
-    /* ***************************************************** *
-     * Display Alarm Clock
-     *
-     * Parameters:
-     *   index - the integer value of the alarm clock to
-     *           display - 1 or 2
-     * ***************************************************** */
-     /*  Reminder of AlarmTime Structure:
-       struct AlarmTime {
-       uint8_t Second;       // 0-59 = 6 bits 0=for alarm2
-       uint8_t Minute;       // 0-59 = 6 bits
-       uint8_t Hour;         // 0-23 = 5 bits
-       uint8_t AlarmMode;    // 0=Daily, 1=Weekday, 2=Weekend, 3=Once
-       uint8_t ClockMode;    // 0-2; 0=AM, 1=PM, 2=24hour
-       bool Enabled;         // true/false
-       }
-      */
-      /* LCD alarm display pseudo code:
-         Alarm 1      ON
-         hh:mm AM Daily
-         Alarm 1      OFF
-         hh:mm PM Weekday
-         Alarm 1      ON
-         hh:mm AM Weekend
-         Alarm 2      ON
-         hh:mm 24 Once                                         */
-         digitalWrite(greenLed, LOW);
+    
+    digitalWrite(greenLed, LOW);
     AlarmTime alarm;            //create AlarmTime struct from Library
 
     if (index == alarm2) {
@@ -548,8 +511,7 @@ void changeHour(byte i = clock0, bool increment = true) {
         Clock.write(NowTime);
         break;
     }
-    Serial.println("End changeHour");
-    //TODO: Error checking. Would return 0 for fail and 1 for OK
+  
 }
 
 void changeMinute(byte i = 0, bool increment = true) {
@@ -887,50 +849,6 @@ void toggleBuzzer() {
     }
 }
 
-//void feederDoor(bool animalPresent = false){
-//
-//unsigned long currTime;
-//bool pRange;
-//bool fRange;
-//        if(animalPresent == true){
-//        switch(currWeight){
-//            case classA:
-//            currTime = millis();
-//            if((millis() - currTime) <= doorInterval){
-//                 lcd.clear();
-//                 lcd.setCursor(0,0);
-//                 lcd.print("Feeding...");
-//                 
-//                 if((pWeight.get_units(2)) > 8 && (pWeight.get_units(2)) < 10){pRange = true;} 
-//                 if((scale.get_units(2)) <= 12){fRange = true; } 
-//                 if((scale.get_units(2)) > 12){fRange = false; pRange = false;} 
-//                 
-//                 if(pRange == true && fRange == true){door.write(180);}
-//                 if(fRange == false && pRange == false){door.write(angle); }
-//               }
-//               ClockState = ShowClock;        
-//            break;
-//            case classB:
-//            break;
-//            case classC:
-//            break;
-//            case classD:
-//            break;
-//            case classE:
-//            break;
-//            case classF:
-//            break;
-//            case classG:
-//            break;
-//            case classH:
-//            break;
-//            default:
-//            break;
-//        }
-//        }
-//    
-//}
-
 void openDoor(){
  
     lcd.clear();
@@ -938,8 +856,29 @@ void openDoor(){
     lcd.print("Feeding...");
 
     door.write(180);
-        if((pWeight.get_units(5)) > 8 && (pWeight.get_units(5)) < 14){
-          closeDoor(0);
+        if((pWeight.get_units(5)) > 8 && (pWeight.get_units(5)) <= 18){
+           if ((millis() - doorStartTime) >= doorInterval){
+                doorStartTime = millis();
+                closeDoor(0);
+            }           
+        }
+        if((pWeight.get_units(5)) > 18 && (pWeight.get_units(5)) <= 23){
+           if ((millis() - doorStartTime) >= doorInterval){
+                doorStartTime = millis();
+                closeDoor(1);
+            }           
+        }
+        if((pWeight.get_units(5)) > 23 && (pWeight.get_units(5)) <= 29){
+           if ((millis() - doorStartTime) >= doorInterval){
+                doorStartTime = millis();
+                closeDoor(2);
+            }           
+        }
+        if((pWeight.get_units(5)) > 29 && (pWeight.get_units(5)) <= 36){
+           if ((millis() - doorStartTime) >= doorInterval){
+                doorStartTime = millis();
+                closeDoor(3);
+            }           
         }
 }
 
@@ -947,16 +886,34 @@ void closeDoor(const byte animalWeight){
 
     switch (animalWeight){
         case 0:
-            if((scale.get_units(5)) >= 11){
+            if((scale.get_units(5)) >= 17){
                   door.write(0);
-                  
-            }
-           
+                  ClockState = ShowClock;                  
+            }          
+        break;
+        case 1:
+            if((scale.get_units(5)) >= 26){
+                  door.write(0);
+                  ClockState = ShowClock;                  
+            }          
+        break;
+        case 2:
+            if((scale.get_units(5)) >= 35){
+                  door.write(0);
+                  ClockState = ShowClock;                  
+            }          
+        break;
+        case 3:
+            if((scale.get_units(5)) >= 45){
+                  door.write(0);
+                  ClockState = ShowClock;                  
+            }          
         break;
         default:
+        
         break;
     }
-     ClockState = ShowClock; 
+     
 }
 
 void Snooze() {
@@ -967,16 +924,16 @@ void Snooze() {
         break;
     case alarm1:
         //alarm 1
-        Clock.snoozeAlarm(1, SnoozePeriod);
+        Clock.snoozeAlarm(1,SnoozePeriod);
         break;
     case alarm2:
         //alarm 2
-        Clock.snoozeAlarm(2, SnoozePeriod);
+        Clock.snoozeAlarm(2,SnoozePeriod);
         break;
     case 3:
         //both alarms
-        Clock.snoozeAlarm(1, SnoozePeriod);
-        Clock.snoozeAlarm(2, SnoozePeriod);
+        Clock.snoozeAlarm(1,SnoozePeriod);
+        Clock.snoozeAlarm(2,SnoozePeriod);
         break;
     default:
         //do nothing
@@ -1799,10 +1756,10 @@ void setup() {
 void loop() {
     static long previousMillis = 0;
 
-//    Serial.print(pWeight.get_units(2),1);
+//    Serial.print(pWeight.get_units(5),1);
 //    Serial.print(" grams"); 
 //    Serial.print("                  ");
-//    Serial.print(scale.get_units(2),1);
+//    Serial.print(scale.get_units(5),1);
 //    Serial.println(" grams");
     
 
