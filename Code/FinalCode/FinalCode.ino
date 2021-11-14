@@ -9,63 +9,64 @@
 #include "HX711.h"                 
 #include "pitches.h"
 
-#define calibFactor1 214.0 
-#define dout1  6
-#define clk1  5
+#define calibFacPet 216.0 
+#define doutPet 6
+#define clkPet 5
 
-#define calibFactor2 213.0 
-#define dout2  4
-#define clk2  3
+#define calibFacPlate 218.5 
+#define doutPlate 4
+#define clkPlate 3
 
   /* ***********************************************************
    *                      Global Constants                     *
    *                    Hardware Definitions                   *
    * ********************************************************* */
 
-LiquidCrystal_I2C lcd(0x27, 16, 2);     // instantiates the LiquiCrystal
 
-                                         // Object class to variable lcd
-const byte RTC_addr = 0x68;                // I2C address of DS3231 RTC
-const byte EEPROM_addr = 0x57;             // I2C address of AT24C32N EEPROM
-const bool INTCN = true;                 // allows SQW pin to be monitored
+
+const byte RTC_addr = 0x68;      // I2C address of DS3231 RTC
+const byte EEPROM_addr = 0x57;  // I2C address of AT24C32N EEPROM
+const bool INTCN = true;       // allows SQW pin to be monitored
 
 const int Snooze_Pin = 11;
 const int Lt_Pin = 9;
 const int Rt_Pin = 10;
 const int doorPin = 12;
-
-const int DebouceTime = 30;               // button debouce time in ms
      
 SimpleAlarmClock Clock(RTC_addr, EEPROM_addr, INTCN);  // SimpleAlarmClock object
+LiquidCrystal_I2C lcd(0x27, 16, 2);                   // LiquiCrystal object
 HX711 scale;
 HX711 pWeight;
 Servo door;
 
+const int DebouceTime = 30;    // button debouce time in ms
 Button SnoozeKey(Snooze_Pin, BUTTON_PULLUP_INTERNAL, true, DebouceTime);
 Button LtKey(Lt_Pin, BUTTON_PULLUP_INTERNAL, true, DebouceTime);
 Button RtKey(Rt_Pin, BUTTON_PULLUP_INTERNAL, true, DebouceTime);
 
-const int LED_Pin = 13;                 // digital pin for LED
-const int greenLed = 8;                 // digital pin for LED
-const int BUZZER_Pin = 7;              // digital pin for tone buzzer
-const int SQW_Pin = 2;                  // Interrrupt pin
+const int LED_Pin = 13;      // digital pin for LED
+const int greenLed = 8;     // digital pin for LED
+const int BUZZER_Pin = 7;  // digital pin for tone buzzer
+const int SQW_Pin = 2;    // Interrrupt pin
 
-const int Button_Hold_Time = 2000;      // button hold length of time in ms
-const int Alarm_View_Pause = 2000;      // View Alarm Length of time in ms
+const int Button_Hold_Time = 2000;   // button hold length of time in ms
+const int Alarm_View_Pause = 2000;  // View Alarm Length of time in ms
 const int FeedAmtPauseTime = 3000;
-const byte SnoozePeriod = 9;            // Snooze value, in minutes
-const int flashInterval = 1000;         // Alarm flashing interval
-const int SkipClickTime = 60;           // Time in ms to ignore button click
+const byte SnoozePeriod = 9;      // Snooze value, in minutes
+const int flashInterval = 1000;  // Alarm flashing interval
+const int SkipClickTime = 60;   // Time in ms to ignore button click
 
 //Alarm types:
 const byte Daily = 0;
 const byte Weekday = 1;
 const byte Weekend = 2;
 const byte Once = 3;
+
 //Clock Modes:
 const byte AMhr = 0;
 const byte PMhr = 1;
 const byte M24hr = 2;
+
 //Clocks
 const byte clock0 = 0;
 const byte alarm1 = 1;
@@ -80,7 +81,6 @@ int melody[] = {
 
     NOTE_C6, NOTE_C6, NOTE_C6, NOTE_C6, NOTE_C6,  // notes in the melody:
 };
-
 int noteDurations[] = { 16, 16, 16, 16, 16 };  // note durations: 4 = quarter note, 8 = eighth note, etc.
 
 enum States {
@@ -100,54 +100,59 @@ enum States {
 States ClockState = ShowClock;
 States PrevState = EditAlarm2;  
 
-byte HourType = 0;                // 0=AM/PM, 1=24hour - used in display alarm - to be deleted
-bool Fahrenheit = true;           // Or Celsius=false
+byte HourType = 0;        // 0=AM/PM, 1=24hour - used in display alarm - to be deleted
+byte EditHourType = 0;   // 0=AM, 1=PM, 2=24hour - used for edit only
+byte ActiveAlarms = 0;  // used to store active alarms (not enabled alarms)
+byte cpIndex = 0;      // Cursor Position Index - used for edit mode
+
+bool Fahrenheit = true;             // Or Celsius=false
 bool PrevFahrenheit = Fahrenheit;  // Capture previous Fahrenheit
-float CurrentTemperature;         // Maybe move as static variable under displayClock function
-unsigned long RunTime;            // Used to track time between get temperature value
+bool bHoldButtonFlag = false;     // used to prevent holdButton also activating clickButton
+bool bDisplayStatus = true;      // used to track the lcd display on status
+bool animalPresent;             // check if pet is present
+
+float CurrentTemperature;  // Maybe move as static variable under displayClock function
+float feedRem;
+float foodBackup;
+
+int minAngle = 0;
+int maxAngle = 180;
+
+unsigned int MaxAmtfood = 5000;
+unsigned long RunTime;                    // Used to track time between get temperature value
 unsigned long buttonHoldPrevTime = 0.0;  // Used to track button hold times 
 unsigned long AlarmRunTime;
 unsigned long doorStartTime = 0;
 unsigned long doorInterval = 500;
-DateTime PreviousTime;            // Maybe move as static variable under displayClock function
-AlarmTime PreviousAlarm;          // Maybe move as static variable under displayAlarm function
-byte EditHourType = 0;            // 0=AM, 1=PM, 2=24hour - used for edit only
-byte cpIndex = 0;                 // Cursor Position Index - used for edit mode
-byte ActiveAlarms = 0;            // used to store active alarms (not enabled alarms)
-bool bHoldButtonFlag = false;     // used to prevent holdButton also activating clickButton
-bool bDisplayStatus = true;       // used to track the lcd display on status
-unsigned int MaxAmtfood = 5000;
-float feedRem;
-float foodBackup;
-bool animalPresent;
-int angle = 0;
+unsigned long plateStartTime = 0;
+unsigned long plateInterval = 1000;
+
+DateTime PreviousTime;     // Maybe move as static variable under displayClock function
+AlarmTime PreviousAlarm;  // Maybe move as static variable under displayAlarm function
 
 //custom LCD characters
-//Up arrow
 byte cA1[8] = {
               0b00100,
               0b01110,
-              0b11111,
+              0b11111,  //Up arrow
               0b00000,
               0b00000,
               0b00000,
               0b00000,
               0b00000 };
-//Down arrow
 byte cA2[8] = {
               0b00000,
               0b00000,
-              0b00000,
+              0b00000,  //Down arrow
               0b00000,
               0b00000,
               0b11111,
               0b01110,
               0b00100 };
-//Both arrows
 byte cBA[8] = {
               0b00100,
               0b01110,
-              0b11111,
+              0b11111,  //Both arrows
               0b00000,
               0b00000,
               0b11111,
@@ -274,6 +279,7 @@ void DisplayNextFeed(){
           //time difference calculation
    if((NowTime.ClockMode == AMhr && clockHr > alm1.hours) || (NowTime.ClockMode == AMhr && clockHr == alm1.hours && clockMin > alm1.minutes) || (NowTime.ClockMode == PMhr && clockHr < alm2.hours) 
           || (clockHr == alm2.hours && NowTime.ClockMode == PMhr && clockMin < alm2.minutes) ||(NowTime.ClockMode == PMhr && clockHr == 12)){
+            
               if(alm2.minutes < clockMin){
                 --alm2.hours;
                 alm2.minutes += 60;
@@ -849,14 +855,32 @@ void toggleBuzzer() {
     }
 }
 
+bool checkPlate(){
+  if((scale.get_units(5)) <= 5){
+    return true;
+  }
+  else{return false;}
+}
+
 void openDoor(){
- 
+
+    bool plateEmpty;
+    
     lcd.clear();
     lcd.setCursor(0,0);
     lcd.print("Feeding...");
 
-    door.write(180);
-        if((pWeight.get_units(5)) > 8 && (pWeight.get_units(5)) <= 18){
+    if((scale.get_units(5)) <= 5){
+      door.write(maxAngle);
+    }
+    else { 
+      if ((millis() - plateStartTime) >= plateInterval) { 
+        plateStartTime = millis();
+        plateEmpty = checkPlate();
+         }       
+      }
+        if (plateEmpty == true){
+          if((pWeight.get_units(5)) > 8 && (pWeight.get_units(5)) <= 18){
            if ((millis() - doorStartTime) >= doorInterval){
                 doorStartTime = millis();
                 closeDoor(0);
@@ -879,6 +903,7 @@ void openDoor(){
                 doorStartTime = millis();
                 closeDoor(3);
             }           
+        }
         }
 }
 
@@ -939,8 +964,8 @@ void Snooze() {
         //do nothing
         break;
     }
-    toggleLED(false);                  // Confirm LED turned off
-    lcd.display();                     // Just in case it was off
+    toggleLED(false);  // Confirm LED turned off
+    lcd.display();    // Just in case it was off
 
 }
 
@@ -1690,7 +1715,7 @@ void setup() {
        // Get the start time
     RunTime = millis(); 
 
-    Serial.begin(9600);
+    Serial.begin(9600);  //for debugging
 
         // Pin Modes 
     pinMode(LED_Pin, OUTPUT);
@@ -1703,10 +1728,10 @@ void setup() {
        //LCD Stuff and welcome screen 
     lcd.init();
     lcd.clear();
-    lcd.backlight();
-     /* welcome();
-      delay(4000);
-      lcd.clear();*/
+    lcd.backlight();    
+    welcome();
+    delay(4000);
+    lcd.clear();
     
        //Create custom lcd characters
     lcd.createChar(1, cA1);
@@ -1716,28 +1741,24 @@ void setup() {
 
       //Clock Stuff  
     Clock.begin();
+    if (Clock.getOSFStatus() == true) { ClockState = PowerLoss;}
 
-    if (Clock.getOSFStatus() == true) {
-          
-        ClockState = PowerLoss;   //Restart from power loss detected
-    }
-    
-    CurrentTemperature = getTemperatureValue();
+      //check temperature
+   CurrentTemperature = getTemperatureValue();
 
-   pWeight.begin(dout1, clk1);
-   pWeight.set_scale(calibFactor1); 
+      //weight sensors
+   pWeight.begin(doutPet, clkPet);
+   pWeight.set_scale(calibFacPet); 
    pWeight.tare(); 
+   scale.begin(doutPlate, clkPlate);
+   scale.set_scale(calibFacPlate); 
+   scale.tare();
 
-    scale.begin(dout2, clk2);
-    scale.set_scale(calibFactor2); 
-    scale.tare();
-
-     door.attach(doorPin);
-     door.write(angle);
-    
-
-  
-        //Button callback functions 
+      //feeder door
+   door.attach(doorPin);
+   door.write(minAngle);
+     
+       //Button callback functions 
     LtKey.clickHandler(ButtonClick);
     LtKey.holdHandler(ButtonHold, Button_Hold_Time);
     RtKey.clickHandler(ButtonClick);
@@ -1848,7 +1869,7 @@ void loop() {
          foodParam();
         break;
     case DoorOpening:
-          openDoor();
+        openDoor();
     break;
     default:
         displayClock();
