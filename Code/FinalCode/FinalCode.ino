@@ -22,25 +22,25 @@
    *                    Hardware Definitions                   *
    * ********************************************************* */
 
-
-
 const byte RTC_addr = 0x68;      // I2C address of DS3231 RTC
 const byte EEPROM_addr = 0x57;  // I2C address of AT24C32N EEPROM
 const bool INTCN = true;       // allows SQW pin to be monitored
 
+   //pin configurations
 const int Snooze_Pin = 11;
-const int Lt_Pin = 9;
+const int Lt_Pin = 9;           
 const int Rt_Pin = 10;
 const int doorPin = 12;
      
 SimpleAlarmClock Clock(RTC_addr, EEPROM_addr, INTCN);  // SimpleAlarmClock object
-LiquidCrystal_I2C lcd(0x27, 16, 2);                   // LiquiCrystal object
-HX711 scale;
-HX711 pWeight;
-Servo door;
+LiquidCrystal_I2C lcd(0x27, 16, 2);                   // LCD object
+HX711 scale;                                         // Plate-load cell object
+HX711 pWeight;                                      //Pet-load cell object
+Servo door;                                        //motor object
+const int DebouceTime = 30;                      // button debouce time in ms
 
-const int DebouceTime = 30;    // button debouce time in ms
-Button SnoozeKey(Snooze_Pin, BUTTON_PULLUP_INTERNAL, true, DebouceTime);
+   //button objects
+Button SnoozeKey(Snooze_Pin, BUTTON_PULLUP_INTERNAL, true, DebouceTime);  
 Button LtKey(Lt_Pin, BUTTON_PULLUP_INTERNAL, true, DebouceTime);
 Button RtKey(Rt_Pin, BUTTON_PULLUP_INTERNAL, true, DebouceTime);
 
@@ -51,23 +51,23 @@ const int SQW_Pin = 2;    // Interrrupt pin
 
 const int Button_Hold_Time = 2000;   // button hold length of time in ms
 const int Alarm_View_Pause = 2000;  // View Alarm Length of time in ms
-const int FeedAmtPauseTime = 3000;
+const int FeedAmtPauseTime = 3000; // view time for feed remaining
 const byte SnoozePeriod = 9;      // Snooze value, in minutes
 const int flashInterval = 1000;  // Alarm flashing interval
 const int SkipClickTime = 60;   // Time in ms to ignore button click
 
-//Alarm types:
+   //Alarm types:
 const byte Daily = 0;
 const byte Weekday = 1;
 const byte Weekend = 2;
 const byte Once = 3;
 
-//Clock Modes:
+   //Clock Modes:
 const byte AMhr = 0;
 const byte PMhr = 1;
 const byte M24hr = 2;
 
-//Clocks
+   //Clocks
 const byte clock0 = 0;
 const byte alarm1 = 1;
 const byte alarm2 = 2;
@@ -77,11 +77,9 @@ const byte alarm2 = 2;
  *                      Global Variables                     *
  * ********************************************************* */
  
-int melody[] = {
+int melody[] = { NOTE_C6, NOTE_C6, NOTE_C6, NOTE_C6, NOTE_C6,};  // notes in the melody:
 
-    NOTE_C6, NOTE_C6, NOTE_C6, NOTE_C6, NOTE_C6,  // notes in the melody:
-};
-int noteDurations[] = { 16, 16, 16, 16, 16 };  // note durations: 4 = quarter note, 8 = eighth note, etc.
+int noteDurations[] = { 16, 16, 16, 16, 16 };                  // note durations: 4 = quarter note, 8 = eighth note, etc.
 
 enum States {
     PowerLoss,
@@ -115,17 +113,16 @@ float CurrentTemperature;  // Maybe move as static variable under displayClock f
 float feedRem;
 float foodBackup;
 
-int minAngle = 0;
-int maxAngle = 180;
+int minAngle = 0;     //min angle for door
+int maxAngle = 180;  //max angle for door
+int foodAmt = 5000;
 
-unsigned int MaxAmtfood = 5000;
+unsigned int MaxAmtfood;                     //used to track food remaining
+unsigned int feedAmtRem;                    //food remaining
+unsigned int counter = 0;                  //used to track the amount of food
 unsigned long RunTime;                    // Used to track time between get temperature value
 unsigned long buttonHoldPrevTime = 0.0;  // Used to track button hold times 
 unsigned long AlarmRunTime;
-unsigned long doorStartTime = 0;
-unsigned long doorInterval = 500;
-unsigned long plateStartTime = 0;
-unsigned long plateInterval = 1000;
 
 DateTime PreviousTime;     // Maybe move as static variable under displayClock function
 AlarmTime PreviousAlarm;  // Maybe move as static variable under displayAlarm function
@@ -159,6 +156,224 @@ byte cBA[8] = {
               0b01110,
               0b00100 };
 
+/* ***********************************************************
+ *                     Function Prototypes                   *
+ * ********************************************************* */
+ bool checkPlate();
+ byte CheckAlarmStatus();
+
+ float getTemperatureValue();
+
+ int feedTracker(int foodReleased);
+
+ String dow2Str(byte bDow);
+ String p2Digits(int numValue);
+ String Amt2Digits(int numValue);
+ 
+ void displayClock(bool changeFlag = false);
+ void DisplayNextFeed();
+ void displayAlarm(byte index = 1, bool changeFlag = false);
+ void changeHour(byte i = clock0, bool increment = true);
+ void changeMinute(byte i = 0, bool increment = true); 
+ void changeClockMode(byte i = 0, bool increment = true);
+ void changeAlarmMode(byte i = 1, bool increment = true);
+ void changeTemp();
+ void changeMonth(byte i = 0, bool increment = true);
+ void changeDay(byte i = 0, bool increment = true);
+ void changeYear(byte i = 0, bool increment = true);
+ void changeFeedAmt(bool increment = true);
+ void foodParam(bool change = false);
+ void fixAlarmClockMode(byte alarmIndex, byte NewClockMode);
+ void toggleShowAlarm(byte i = 1);
+ void toggleLED(bool ledON = true);
+ void toggleBuzzer();
+ void openDoor();
+ void closeDoor(int animalWeight);
+ void Snooze();
+ void clearAlarms();
+ void editClock(byte i = 0);
+ void editAlarm(byte i = 0);
+ void showAmtOfFood(bool changeFlag = false);
+ void editFeedAmt(byte i = 0);
+ void toggleShowAmtOfFood();
+ void ButtonClick(Button& b);
+ void ButtonHold(Button& b); 
+ void lcdAlarmIndicator();
+ void welcome();
+ void checkAnimal();
+
+/* ***********************************************************
+ *                         main Setup                        *
+ * ********************************************************* */
+void setup() {
+       
+   RunTime = millis();  // Get the start time
+
+   Serial.begin(9600);  //for debugging
+
+      // Pin Modes 
+   pinMode(LED_Pin, OUTPUT);
+   digitalWrite(LED_Pin, LOW);
+   pinMode(greenLed, OUTPUT);
+   digitalWrite(greenLed, LOW);
+   pinMode(BUZZER_Pin, OUTPUT);
+   digitalWrite(BUZZER_Pin, LOW);
+    
+      //LCD Stuff and welcome screen 
+   lcd.init();
+   lcd.clear();
+   lcd.backlight();    
+   welcome();
+   delay(4000);
+   lcd.clear();
+    
+      //Create custom lcd characters
+   lcd.createChar(1, cA1);
+   lcd.createChar(2, cA2);
+   lcd.createChar(3, cBA);
+    
+      //Clock Stuff
+   Clock.begin();
+   if (Clock.getOSFStatus() == true) { ClockState = PowerLoss;}
+  
+      //check temperature
+   CurrentTemperature = getTemperatureValue();
+
+   //weight sensors
+   pWeight.begin(doutPet, clkPet);
+   pWeight.set_scale(calibFacPet); 
+   pWeight.tare(); 
+   scale.begin(doutPlate, clkPlate);
+   scale.set_scale(calibFacPlate); 
+   scale.tare();
+
+      //feeder door
+   door.attach(doorPin);
+   door.write(minAngle);
+     
+       //Button callback functions 
+    LtKey.clickHandler(ButtonClick);
+    LtKey.holdHandler(ButtonHold, Button_Hold_Time);
+    RtKey.clickHandler(ButtonClick);
+    RtKey.holdHandler(ButtonHold, Button_Hold_Time);
+    SnoozeKey.clickHandler(ButtonClick);
+    SnoozeKey.holdHandler(ButtonHold, Button_Hold_Time);
+
+       //Display the clock
+    displayClock(true);
+
+}
+
+/* ***********************************************************
+ *                         main Loop                         *
+ * ********************************************************* */
+void loop() {
+    static long previousMillis = 0;
+    
+    switch (ClockState) {
+        case PowerLoss:
+           displayClock();
+        
+              //Flash Clock
+           if ((millis() - previousMillis) >= flashInterval) {
+                previousMillis = millis();
+                   if (bDisplayStatus == true) {
+                       lcd.noDisplay();
+                   }
+               else {
+                   lcd.display();
+                     }
+               bDisplayStatus = !bDisplayStatus;
+            }
+        break;
+        
+        case ShowClock:
+            displayClock();
+        break;
+        
+        case ShowAlarm1:              
+            if ((millis() - AlarmRunTime) <= Alarm_View_Pause) {
+                displayAlarm(alarm1);
+             }
+            else {
+                ClockState = ShowClock;
+                displayClock(true);
+             }
+        break;
+        
+        case ShowAlarm2:
+            if ((millis() - AlarmRunTime) <= Alarm_View_Pause) {
+               displayAlarm(alarm2);
+            }
+            else {
+               ClockState = ShowClock;
+               displayClock(true);
+            }
+        break;
+        
+        case ShowFeedAmt:
+            if ((millis() - AlarmRunTime) <= FeedAmtPauseTime) {
+                showAmtOfFood();
+             }
+            else {
+               ClockState = ShowClock;
+               displayClock(true);
+             }
+        break;
+
+        case Alarm:
+            displayClock();
+        
+           //Flash Clock
+           if ((millis() - previousMillis) >= flashInterval) {
+               previousMillis = millis();
+                if (bDisplayStatus == true) {
+                   lcd.noDisplay();
+               }
+               else {
+                   lcd.display();
+               }
+               bDisplayStatus = !bDisplayStatus;
+                digitalWrite(greenLed, LOW);
+                toggleLED();
+                toggleBuzzer();
+                checkAnimal();
+             }        
+        break;
+        
+       case EditClock:
+           editClock(cpIndex);
+           displayClock();
+       break;
+       
+       case EditAlarm1:
+           editAlarm(cpIndex);
+           displayAlarm(alarm1);
+       break;
+       
+       case EditAlarm2:
+            editAlarm(cpIndex);
+            displayAlarm(alarm2);
+       break;
+       
+       case EditFeedAmt:
+            editFeedAmt(cpIndex);
+            foodParam();
+       break;
+       
+       case DoorOpening:
+           openDoor();
+       break;
+       
+       default:
+            displayClock();
+       break;
+   }
+    LtKey.process();
+    RtKey.process();
+    SnoozeKey.process();
+    ActiveAlarms = CheckAlarmStatus();  //Returns which alarms are activated
+}
 
 /* ***********************************************************
  *                         Functions                         *
@@ -746,17 +961,16 @@ void changeYear(byte i = 0, bool increment = true) {
 
 void changeFeedAmt(bool increment = true){
 
-      float maxAmt = 5000;
-      float minAmt = 1000;
- 
-    if (increment == true) { MaxAmtfood += 1000; }
-    else { MaxAmtfood -= 1000; }
+      
+    if (increment == true) { foodAmt += 1000; }
+    else { foodAmt -= 1000; }
 
-      if (MaxAmtfood < 1000) { MaxAmtfood = maxAmt; }
-    if (MaxAmtfood > 5000) { MaxAmtfood = minAmt; }
+      if (foodAmt < 1000) { foodAmt = 5000; }
+    if (foodAmt > 5000) { foodAmt = 1000; }
 
+    MaxAmtfood = foodAmt;
     lcd.setCursor(0,1);
-    lcd.print(MaxAmtfood);
+    lcd.print(foodAmt);
 
 }
 
@@ -856,7 +1070,7 @@ void toggleBuzzer() {
 }
 
 bool checkPlate(){
-  while((scale.get_units(5)) > 1){
+  while((scale.get_units(5)) > 60){
     door.write(minAngle);
   }
   return true;
@@ -870,13 +1084,15 @@ void openDoor(){
     lcd.setCursor(0,0);
     lcd.print("Feeding...");
 
-    if((scale.get_units(5)) <= 5){
+    if((scale.get_units(5)) <= 60){
         door.write(maxAngle);
+        counter++;
         plateEmpty = true; 
     }
-    if((scale.get_units(5)) > 5) {   
+    if((scale.get_units(5)) > 70) {   
         plateEmpty = checkPlate();
         door.write(maxAngle);
+        counter++;
       }
         if (plateEmpty == true){
             if((pWeight.get_units(5)) > 1 && (pWeight.get_units(5)) <= 40){
@@ -896,6 +1112,8 @@ void openDoor(){
 
 void closeDoor(int animalWeight){
 
+int tracker;
+
   switch (animalWeight){
       case 0:
           while((scale.get_units(5)) <= 140){
@@ -905,6 +1123,7 @@ void closeDoor(int animalWeight){
             
            door.write(maxAngle);
          }
+            tracker = feedTracker(scale.get_units(5));
             door.write(minAngle);
             animalPresent = false;
             ClockState = ShowClock;
@@ -915,7 +1134,8 @@ void closeDoor(int animalWeight){
             lcd.print(Amt2Digits(scale.get_units(5)));
             lcd.print(" g");
             door.write(maxAngle);
-         }
+         }  
+           tracker = feedTracker(scale.get_units(5));
             door.write(minAngle);
             animalPresent = false;
             ClockState = ShowClock;
@@ -927,6 +1147,7 @@ void closeDoor(int animalWeight){
             lcd.print(" g");
            door.write(maxAngle);
          }
+           tracker = feedTracker(scale.get_units(5));
             door.write(minAngle);
             animalPresent = false;
             ClockState = ShowClock;
@@ -938,6 +1159,7 @@ void closeDoor(int animalWeight){
             lcd.print(" g");
            door.write(maxAngle);
          }
+            tracker = feedTracker(scale.get_units(5));
             door.write(minAngle);
             animalPresent = false;
             ClockState = ShowClock;
@@ -1008,14 +1230,23 @@ void editAlarm(byte i = 0) {
     lcd.blink();
 }
 
-void showAmtOfFood(bool changeFlag = false){
+int feedTracker(int foodReleased){
+    int prevCounter;
+    int foodAmt;
 
-        float prevFeed;
-        DateTime NowTime;   
-        NowTime = Clock.read(); 
+      if(prevCounter != counter){
+        foodAmt = MaxAmtfood; 
+        feedAmtRem = foodAmt - foodReleased;
+        prevCounter = counter;
+        foodAmt = feedAmtRem;
+      }
+      return foodAmt;
+}
+
+void showAmtOfFood(bool changeFlag = false){
         
-        foodBackup = MaxAmtfood;
-       // feedRem = foodBackup - scale.get_units(10);   
+        DateTime NowTime;   
+        NowTime = Clock.read();  
 
     if (NowTime.Day != PreviousTime.Day) { changeFlag = true; }
     if (NowTime.Month != PreviousTime.Month) { changeFlag = true; }
@@ -1023,41 +1254,21 @@ void showAmtOfFood(bool changeFlag = false){
 
             if (changeFlag == true){
         lcd.clear(); 
-        lcd.setCursor(0, 0);                       // Column, Row
-        lcd.print(dow2Str(NowTime.Dow));          // Integer Day of the week
-                                                  // convert to String with
-                                                  // an optional leading zero
+        lcd.setCursor(0, 0);                       
+        lcd.print(dow2Str(NowTime.Dow));         // Integer Day of the week
         lcd.print(" ");
-        lcd.print(p2Digits(NowTime.Day));
+        lcd.print(p2Digits(NowTime.Day));      // Integer Day 
         lcd.print("/");
-        lcd.print(p2Digits(NowTime.Month));
+        lcd.print(p2Digits(NowTime.Month));  // Integer month
         lcd.print("/");
         int i = 2000 + NowTime.Year;
-        lcd.print(i);
-
-          if(feedRem < 0){ feedRem = 0;}
-          if(feedRem >= MaxAmtfood){ feedRem = MaxAmtfood;}
-         if((scale.get_units(5)) > 7){
-            feedRem = foodBackup - scale.get_units(5);
-            lcd.setCursor(0, 1); 
-            lcd.print("Feed Amt ");  
-            lcd.print(Amt2Digits(feedRem)); 
-            lcd.print("g"); 
-            
-           
-         }
-         foodBackup = feedRem; 
-          prevFeed = feedRem;
-        if((scale.get_units(5)) < 7){
-            lcd.setCursor(0, 1); 
-            lcd.print("Feed Amt ");  
-            lcd.print(Amt2Digits(prevFeed)); 
-            lcd.print("g");
-        }
-         
-
-       // 
+        lcd.print(i);                     // interger year      
             }
+
+        lcd.setCursor(0, 1);
+        lcd.print("Feed Amt "); 
+        lcd.print(Amt2Digits(feedAmtRem));
+        lcd.print("g");
 }
 
 void editFeedAmt(byte i = 0) {
@@ -1107,7 +1318,6 @@ void ButtonClick(Button& b) {
             //Alarm Mode
             switch (b.pinValue()) {
             case Snooze_Pin:
-                //Snooze alarm for 9 minutes
                 Snooze();
                 ClockState = ShowClock;
                 break;
@@ -1707,7 +1917,7 @@ void welcome() {
 
 void checkAnimal(){
   
-   if((pWeight.get_units(5)) > 3){
+   if((pWeight.get_units(5)) > 30){
 
     Serial.print("Pet weight ");
     Serial.print(pWeight.get_units(5),1);
@@ -1720,178 +1930,4 @@ void checkAnimal(){
           ClockState = DoorOpening;
         }
 
-}
-
-/* ***********************************************************
- *                         Void Setup                        *
- * ********************************************************* */
-void setup() {
-       // Get the start time
-    RunTime = millis(); 
-
-    Serial.begin(9600);  //for debugging
-
-        // Pin Modes 
-    pinMode(LED_Pin, OUTPUT);
-    digitalWrite(LED_Pin, LOW);
-    pinMode(greenLed, OUTPUT);
-    digitalWrite(greenLed, LOW);
-    pinMode(BUZZER_Pin, OUTPUT);
-    digitalWrite(BUZZER_Pin, LOW);
-
-       //LCD Stuff and welcome screen 
-    lcd.init();
-    lcd.clear();
-    lcd.backlight();    
-    welcome();
-    delay(4000);
-    lcd.clear();
-    
-       //Create custom lcd characters
-    lcd.createChar(1, cA1);
-    lcd.createChar(2, cA2);
-    lcd.createChar(3, cBA);
-    
-
-      //Clock Stuff  
-    Clock.begin();
-    if (Clock.getOSFStatus() == true) { ClockState = PowerLoss;}
-
-      //check temperature
-   CurrentTemperature = getTemperatureValue();
-
-      //weight sensors
-   pWeight.begin(doutPet, clkPet);
-   pWeight.set_scale(calibFacPet); 
-   pWeight.tare(); 
-   scale.begin(doutPlate, clkPlate);
-   scale.set_scale(calibFacPlate); 
-   scale.tare();
-
-      //feeder door
-   door.attach(doorPin);
-   door.write(minAngle);
-     
-       //Button callback functions 
-    LtKey.clickHandler(ButtonClick);
-    LtKey.holdHandler(ButtonHold, Button_Hold_Time);
-    RtKey.clickHandler(ButtonClick);
-    RtKey.holdHandler(ButtonHold, Button_Hold_Time);
-    SnoozeKey.clickHandler(ButtonClick);
-    SnoozeKey.holdHandler(ButtonHold, Button_Hold_Time);
-
-        //Display the clock
-    displayClock(true);
-
-}
-
-/* ***********************************************************
- *                         Void Loop                         *
- * ********************************************************* */
-void loop() {
-    static long previousMillis = 0;
-
-//    Serial.print("Pet weight ");
-//    Serial.print(pWeight.get_units(5),1);
-//    Serial.print(" grams");
-//    Serial.print("                 ");
-//    Serial.print("Feed weight ");
-//    Serial.print(scale.get_units(5),1);
-//    Serial.println(" grams");
-    
-    switch (ClockState) {
-    case PowerLoss:
-        displayClock();
-        
-        //Flash Clock
-        if ((millis() - previousMillis) >= flashInterval) {
-            previousMillis = millis();
-            if (bDisplayStatus == true) {
-                lcd.noDisplay();
-            }
-            else {
-                lcd.display();
-            }
-            bDisplayStatus = !bDisplayStatus;
-        }
-        break;
-    case ShowClock:
-        displayClock();
-        break;
-    case ShowAlarm1:
-        //AlarmRunTime is defined by toggleShowAlarm
-        if ((millis() - AlarmRunTime) <= Alarm_View_Pause) {
-            displayAlarm(alarm1);
-        }
-        else {
-            ClockState = ShowClock;
-            displayClock(true);
-        }
-        break;
-    case ShowAlarm2:
-        //AlarmRunTime is defined by toggleShowAlarm
-        if ((millis() - AlarmRunTime) <= Alarm_View_Pause) {
-            displayAlarm(alarm2);
-        }
-        else {
-            ClockState = ShowClock;
-            displayClock(true);
-        }
-        break;
-    case ShowFeedAmt:
-         if ((millis() - AlarmRunTime) <= FeedAmtPauseTime) {
-            showAmtOfFood();
-        }
-        else {
-            ClockState = ShowClock;
-            displayClock(true);
-        }
-    break;
-
-    case Alarm:
-            displayClock();
-        
-        //Flash Clock
-        if ((millis() - previousMillis) >= flashInterval) {
-            previousMillis = millis();
-            if (bDisplayStatus == true) {
-                lcd.noDisplay();
-            }
-            else {
-                lcd.display();
-            }
-            bDisplayStatus = !bDisplayStatus;
-            digitalWrite(greenLed, LOW);
-            toggleLED();
-            toggleBuzzer();
-            checkAnimal();
-        }        
-        break;
-    case EditClock:
-        editClock(cpIndex);
-        displayClock();
-        break;
-    case EditAlarm1:
-        editAlarm(cpIndex);
-        displayAlarm(alarm1);
-        break;
-    case EditAlarm2:
-        editAlarm(cpIndex);
-        displayAlarm(alarm2);
-        break;
-    case EditFeedAmt:
-         editFeedAmt(cpIndex);
-         foodParam();
-        break;
-    case DoorOpening:
-        openDoor();
-    break;
-    default:
-        displayClock();
-        break;
-   }
-    LtKey.process();
-    RtKey.process();
-    SnoozeKey.process();
-    ActiveAlarms = CheckAlarmStatus();  //Returns which alarms are activated
 }
