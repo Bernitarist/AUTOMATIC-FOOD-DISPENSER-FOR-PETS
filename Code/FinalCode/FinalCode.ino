@@ -37,7 +37,7 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);                   // LCD object
 HX711 scale;                                         // Plate-load cell object
 HX711 pWeight;                                      //Pet-load cell object
 Servo door;                                        //motor object
-const int DebouceTime = 30;                      // button debouce time in ms
+const int DebouceTime = 30;                       // button debouce time in ms
 
    //button objects
 Button SnoozeKey(Snooze_Pin, BUTTON_PULLUP_INTERNAL, true, DebouceTime);  
@@ -109,7 +109,7 @@ bool bHoldButtonFlag = false;     // used to prevent holdButton also activating 
 bool bDisplayStatus = true;      // used to track the lcd display on status
 bool animalPresent;             // check if pet is present
 
-float CurrentTemperature;  // Maybe move as static variable under displayClock function
+float CurrentTemperature;     // Maybe move as static variable under displayClock function
 float feedRem;
 float foodBackup;
 
@@ -127,7 +127,7 @@ unsigned long AlarmRunTime;
 DateTime PreviousTime;     // Maybe move as static variable under displayClock function
 AlarmTime PreviousAlarm;  // Maybe move as static variable under displayAlarm function
 
-//custom LCD characters
+   //custom LCD characters
 byte cA1[8] = {
               0b00100,
               0b01110,
@@ -161,9 +161,7 @@ byte cBA[8] = {
  * ********************************************************* */
  bool checkPlate();
  byte CheckAlarmStatus();
-
  float getTemperatureValue();
-
  int feedTracker(int foodReleased);
 
  String dow2Str(byte bDow);
