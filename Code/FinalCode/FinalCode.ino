@@ -856,10 +856,10 @@ void toggleBuzzer() {
 }
 
 bool checkPlate(){
-  if((scale.get_units(5)) <= 5){
-    return true;
+  while((scale.get_units(5)) > 1){
+    door.write(minAngle);
   }
-  else{return false;}
+  return true;
 }
 
 void openDoor(){
@@ -871,74 +871,82 @@ void openDoor(){
     lcd.print("Feeding...");
 
     if((scale.get_units(5)) <= 5){
-      door.write(maxAngle);
+        door.write(maxAngle);
+        plateEmpty = true; 
     }
-    else { 
-      if ((millis() - plateStartTime) >= plateInterval) { 
-        plateStartTime = millis();
+    if((scale.get_units(5)) > 5) {   
         plateEmpty = checkPlate();
-         }       
+        door.write(maxAngle);
       }
         if (plateEmpty == true){
-          if((pWeight.get_units(5)) > 8 && (pWeight.get_units(5)) <= 18){
-           if ((millis() - doorStartTime) >= doorInterval){
-                doorStartTime = millis();
-                closeDoor(0);
-            }           
-        }
-        if((pWeight.get_units(5)) > 18 && (pWeight.get_units(5)) <= 23){
-           if ((millis() - doorStartTime) >= doorInterval){
-                doorStartTime = millis();
-                closeDoor(1);
-            }           
-        }
-        if((pWeight.get_units(5)) > 23 && (pWeight.get_units(5)) <= 29){
-           if ((millis() - doorStartTime) >= doorInterval){
-                doorStartTime = millis();
-                closeDoor(2);
-            }           
-        }
-        if((pWeight.get_units(5)) > 29 && (pWeight.get_units(5)) <= 36){
-           if ((millis() - doorStartTime) >= doorInterval){
-                doorStartTime = millis();
-                closeDoor(3);
-            }           
-        }
+            if((pWeight.get_units(5)) > 1 && (pWeight.get_units(5)) <= 40){
+               closeDoor(0);
+            }
+            if((pWeight.get_units(5)) > 40 && (pWeight.get_units(5)) <= 80){
+               closeDoor(1);
+            }
+            if((pWeight.get_units(5)) > 80 && (pWeight.get_units(5)) <= 130){
+              closeDoor(2);
+            }
+            if((pWeight.get_units(5)) > 130 && (pWeight.get_units(5)) <= 210){
+              closeDoor(3);
+            }
         }
 }
 
-void closeDoor(const byte animalWeight){
+void closeDoor(int animalWeight){
 
-    switch (animalWeight){
-        case 0:
-            if((scale.get_units(5)) >= 17){
-                  door.write(0);
-                  ClockState = ShowClock;                  
-            }          
-        break;
-        case 1:
-            if((scale.get_units(5)) >= 26){
-                  door.write(0);
-                  ClockState = ShowClock;                  
-            }          
-        break;
-        case 2:
-            if((scale.get_units(5)) >= 35){
-                  door.write(0);
-                  ClockState = ShowClock;                  
-            }          
-        break;
-        case 3:
-            if((scale.get_units(5)) >= 45){
-                  door.write(0);
-                  ClockState = ShowClock;                  
-            }          
-        break;
-        default:
-        
-        break;
-    }
-     
+  switch (animalWeight){
+      case 0:
+          while((scale.get_units(5)) <= 140){
+            lcd.setCursor(0,1);
+            lcd.print(Amt2Digits(scale.get_units(5)));
+            lcd.print(" g");
+            
+           door.write(maxAngle);
+         }
+            door.write(minAngle);
+            animalPresent = false;
+            ClockState = ShowClock;
+      break;
+      case 1:
+           while((scale.get_units(5)) <= 260){
+            lcd.setCursor(0,1);
+            lcd.print(Amt2Digits(scale.get_units(5)));
+            lcd.print(" g");
+            door.write(maxAngle);
+         }
+            door.write(minAngle);
+            animalPresent = false;
+            ClockState = ShowClock;
+      break;
+      case 2:
+          while((scale.get_units(5)) <= 445){
+            lcd.setCursor(0,1);
+            lcd.print(Amt2Digits(scale.get_units(5)));
+            lcd.print(" g");
+           door.write(maxAngle);
+         }
+            door.write(minAngle);
+            animalPresent = false;
+            ClockState = ShowClock;
+      break;
+      case 3:
+          while((scale.get_units(5)) <= 575){
+            lcd.setCursor(0,1);
+            lcd.print(Amt2Digits(scale.get_units(5)));
+            lcd.print(" g");
+           door.write(maxAngle);
+         }
+            door.write(minAngle);
+            animalPresent = false;
+            ClockState = ShowClock;
+      break;
+      default:
+      
+      break;
+  }
+       
 }
 
 void Snooze() {
@@ -1699,7 +1707,13 @@ void welcome() {
 
 void checkAnimal(){
   
-   if((pWeight.get_units(5)) > 9){animalPresent = true;}
+   if((pWeight.get_units(5)) > 3){
+
+    Serial.print("Pet weight ");
+    Serial.print(pWeight.get_units(5),1);
+    Serial.println(" grams");
+    animalPresent = true;
+    }
 
     if(animalPresent == true){
           Snooze();
@@ -1777,13 +1791,14 @@ void setup() {
 void loop() {
     static long previousMillis = 0;
 
+//    Serial.print("Pet weight ");
 //    Serial.print(pWeight.get_units(5),1);
-//    Serial.print(" grams"); 
-//    Serial.print("                  ");
+//    Serial.print(" grams");
+//    Serial.print("                 ");
+//    Serial.print("Feed weight ");
 //    Serial.print(scale.get_units(5),1);
 //    Serial.println(" grams");
     
-
     switch (ClockState) {
     case PowerLoss:
         displayClock();
