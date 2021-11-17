@@ -84,26 +84,26 @@ int noteDurations[] = { 16, 16, 16, 16, 16 };                  // note durations
 enum States {
     PowerLoss,
     ShowClock,
-    ShowAlarm1,
-    ShowAlarm2,
+    ShowFeedTime1,
+    ShowFeedTime2,
     ShowFeedAmt,
-    Alarm,
+    Feeding,
     DoorOpening,
     EditClock,
-    EditAlarm1,
-    EditAlarm2,
+    EditFeedTime1,
+    EditFeedTime2,
     EditFeedAmt,
 };
 
 States ClockState = ShowClock;
-States PrevState = EditAlarm2;  
+States PrevState = EditFeedTime2;  
 
 byte HourType = 0;        // 0=AM/PM, 1=24hour - used in display alarm - to be deleted
 byte EditHourType = 0;   // 0=AM, 1=PM, 2=24hour - used for edit only
 byte ActiveAlarms = 0;  // used to store active alarms (not enabled alarms)
 byte cpIndex = 0;      // Cursor Position Index - used for edit mode
 
-bool Fahrenheit = true;             // Or Celsius=false
+bool Fahrenheit = false;            //Fahrenheit = true & Celsius = false
 bool PrevFahrenheit = Fahrenheit;  // Capture previous Fahrenheit
 bool bHoldButtonFlag = false;     // used to prevent holdButton also activating clickButton
 bool bDisplayStatus = true;      // used to track the lcd display on status
@@ -289,7 +289,7 @@ void loop() {
             displayClock();
         break;
         
-        case ShowAlarm1:              
+        case ShowFeedTime1:              
             if ((millis() - AlarmRunTime) <= Alarm_View_Pause) {
                 displayAlarm(alarm1);
              }
@@ -299,7 +299,7 @@ void loop() {
              }
         break;
         
-        case ShowAlarm2:
+        case ShowFeedTime2:
             if ((millis() - AlarmRunTime) <= Alarm_View_Pause) {
                displayAlarm(alarm2);
             }
@@ -319,7 +319,7 @@ void loop() {
              }
         break;
 
-        case Alarm:
+        case Feeding:
             displayClock();
         
            //Flash Clock
@@ -344,12 +344,12 @@ void loop() {
            displayClock();
        break;
        
-       case EditAlarm1:
+       case EditFeedTime1:
            editAlarm(cpIndex);
            displayAlarm(alarm1);
        break;
        
-       case EditAlarm2:
+       case EditFeedTime2:
             editAlarm(cpIndex);
             displayAlarm(alarm2);
        break;
@@ -379,15 +379,15 @@ void loop() {
 
 void displayClock(bool changeFlag = false) {
     /* ***************************************************** *
-     *   changeFlag - true forces display refresh
-     *              - false does nothing
+         changeFlag - true forces display refresh
+                    - false does nothing
      * ***************************************************** */
     
     digitalWrite(greenLed, HIGH);
-    DateTime NowTime;            //create DateTime struct from Library
-    NowTime = Clock.read();      // get the latest clock values
+    DateTime NowTime;         //create DateTime struct from Library
+    NowTime = Clock.read();  // get the latest clock values
 
-    // Check the temperature every 65 seconds OR if Fahrenheit changes
+       // Check the temperature every 65 seconds OR if Fahrenheit changes
     unsigned long uL = millis() - RunTime;
     if ((uL >= 65000) || (Fahrenheit != PrevFahrenheit)) {
         float PreviousTemperature = CurrentTemperature;
@@ -397,7 +397,7 @@ void displayClock(bool changeFlag = false) {
         if (CurrentTemperature != PreviousTemperature) { changeFlag = true; }
     }
 
-    // Check for Time change
+       // Check for Time change
     if (NowTime.Hour != PreviousTime.Hour) { changeFlag = true; }
     if (NowTime.Minute != PreviousTime.Minute) { changeFlag = true; }
     if (NowTime.ClockMode != PreviousTime.ClockMode) { changeFlag = true; }
@@ -405,13 +405,13 @@ void displayClock(bool changeFlag = false) {
     if (NowTime.Month != PreviousTime.Month) { changeFlag = true; }
     if (NowTime.Year != PreviousTime.Year) { changeFlag = true; }
 
-    //Update Display - Only change display if change is detected
+       //Update Display - Only change display if change is detected
     if (changeFlag == true) {
         lcd.backlight();
         lcd.clear();
 
-        //First Row  hh:mm AM ###.#°F
-        lcd.setCursor(0, 0);                       //Column, Row
+           //First Row  hh:mm AM ###.#°C
+        lcd.setCursor(0, 0);                     
         lcd.print(p2Digits(NowTime.Hour));
         lcd.print(":");
         lcd.print(p2Digits(NowTime.Minute));
@@ -426,23 +426,22 @@ void displayClock(bool changeFlag = false) {
             lcd.print("  H ");
             break;
         default:
-            //do nothing
+               //do nothing
             break;
         }
         if (CurrentTemperature < 100.0) { lcd.print(" "); }
-        lcd.print(String(CurrentTemperature, 1));  // converts float to string
-                                                  // with 1 decimal place
+        lcd.print(String(CurrentTemperature, 1));  // converts float to string with 1 decimal place
         lcd.print((char)223);                     // prints the degree symbol
         if (Fahrenheit) { lcd.print("F"); }
         else { lcd.print("C"); }
                 
-        lcd.setCursor(0, 1);                       // Column, Row
+        lcd.setCursor(0, 1);                      
         lcd.print("Nxt Feed ");
                
         DisplayNextFeed();
 
         lcd.setCursor(15, 1); 
-        lcdAlarmIndicator();                      //lcd.print A1, A2, BA, or -
+        lcdAlarmIndicator();                      //lcd.print upArrow, downArrow, bothArrows, or -
 
         PreviousTime = Clock.read();
 }
@@ -877,7 +876,7 @@ void changeAlarmMode(byte i = 1, bool increment = true) {
 }
 
 void changeTemp() {
-    //change the temperature to F or C
+       //change the temperature to F or C
     Fahrenheit = !Fahrenheit;
     CurrentTemperature = getTemperatureValue();
     RunTime = millis();
@@ -1020,10 +1019,10 @@ void fixAlarmClockMode(byte alarmIndex, byte NewClockMode) {
 void toggleShowAlarm(byte i = 1) {
     if ((i == 1) || (i == 2)) {
         if (i == 2) {
-            ClockState = ShowAlarm2;
+            ClockState = ShowFeedTime2;
         }
         else {
-            ClockState = ShowAlarm1;
+            ClockState = ShowFeedTime1;
         }
         AlarmTime alarm;
         alarm = Clock.readAlarm(i);
@@ -1312,7 +1311,7 @@ void ButtonClick(Button& b) {
                     break;
             }
         break;
-        case Alarm:
+        case Feeding:
             //Alarm Mode
             switch (b.pinValue()) {
             case Snooze_Pin:
@@ -1384,7 +1383,7 @@ void ButtonClick(Button& b) {
             }
 
         break;
-        case EditAlarm1:
+        case EditFeedTime1:
             //Edit Alarm1 Mode
             switch (b.pinValue()) {
             case Snooze_Pin:
@@ -1448,7 +1447,7 @@ void ButtonClick(Button& b) {
                 break;
             }
         break;
-        case EditAlarm2:
+        case EditFeedTime2:
             //Edit Alarm2 Mode
             switch (b.pinValue()) {
             case Snooze_Pin:
@@ -1550,7 +1549,7 @@ void ButtonHold(Button& b) {
                 break;
             case Lt_Pin:
                 //Edit Alarm1
-                ClockState = EditAlarm1;
+                ClockState = EditFeedTime1;
                 cpIndex = 0;
                 buttonHoldPrevTime = millis();
                 bHoldButtonFlag = true;
@@ -1558,7 +1557,7 @@ void ButtonHold(Button& b) {
                 break;
             case Rt_Pin:
                 //Edit Alarm2
-                ClockState = EditAlarm2;
+                ClockState = EditFeedTime2;
                 cpIndex = 0;
                 buttonHoldPrevTime = millis();
                 bHoldButtonFlag = true;
@@ -1568,12 +1567,12 @@ void ButtonHold(Button& b) {
                 break;
             }
             break;
-        case ShowAlarm1:
+        case ShowFeedTime1:
             switch (b.pinValue()) {
             case Snooze_Pin:
                 break;
             case Lt_Pin:
-                ClockState = EditAlarm1;
+                ClockState = EditFeedTime1;
                 cpIndex = 0;
                 buttonHoldPrevTime = millis();
                 bHoldButtonFlag = true;
@@ -1587,7 +1586,7 @@ void ButtonHold(Button& b) {
                 break;
             }
             break;
-        case ShowAlarm2:
+        case ShowFeedTime2:
             switch (b.pinValue()) {
             case Snooze_Pin:
                 break;
@@ -1595,7 +1594,7 @@ void ButtonHold(Button& b) {
                 break;
             case Rt_Pin:
                 //Edit Alarm2
-                ClockState = EditAlarm2;
+                ClockState = EditFeedTime2;
                 cpIndex = 0;
                 buttonHoldPrevTime = millis();
                 bHoldButtonFlag = true;
@@ -1605,7 +1604,7 @@ void ButtonHold(Button& b) {
                 break;
             }
             break;
-        case Alarm:
+        case Feeding:
             //Alarm Mode
             switch (b.pinValue()) {
             case Snooze_Pin:
@@ -1661,7 +1660,7 @@ void ButtonHold(Button& b) {
                 break;
             }
             break;
-        case EditAlarm1:  //Edit Alarm1
+        case EditFeedTime1:  //Edit Alarm1
             switch (b.pinValue()) {
             case Snooze_Pin:
                 lcd.noBlink();
@@ -1678,7 +1677,7 @@ void ButtonHold(Button& b) {
             }
             break;
             
-        case EditAlarm2:  //Edit Alarm1
+        case EditFeedTime2:  //Edit Alarm1
             switch (b.pinValue()) {
                 case Snooze_Pin:
                     lcd.noBlink();
@@ -1703,7 +1702,7 @@ void ButtonHold(Button& b) {
 }
 
 String dow2Str(byte bDow) {
-    // Day of week to string or char array. DOW 1=Sunday, 0 is undefined
+       // Day of week to string or char array. DOW 1=Sunday, 0 is undefined
     static const char* str[] = { "---", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
     if (bDow > 7) bDow = 0;
     return(str[bDow]);
@@ -1740,7 +1739,7 @@ String Amt2Digits(int numValue) {
 }
 
 float getTemperatureValue() {
-   Fahrenheit = false;
+   
     float floatTemperature;
     floatTemperature = Clock.getTemperatureFloat();
     if (Fahrenheit == true) {
@@ -1754,8 +1753,7 @@ byte CheckAlarmStatus() {
     byte flaggedAlarms = Clock.flaggedAlarms();
 
     if (AlarmStatus == LOW) {
-        //Alarm detected
-        ClockState = Alarm;
+        ClockState = Feeding;
     }
     return flaggedAlarms;
 }
