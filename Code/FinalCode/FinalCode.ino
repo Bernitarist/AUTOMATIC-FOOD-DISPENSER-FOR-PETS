@@ -27,7 +27,7 @@ const byte EEPROM_addr = 0x57;  // I2C address of AT24C32N EEPROM
 const bool INTCN = true;       // allows SQW pin to be monitored
 
    //pin configurations
-const int Snooze_Pin = 11;
+const int Ctrl_Pin = 11;
 const int Lt_Pin = 9;           
 const int Rt_Pin = 10;
 const int doorPin = 12;
@@ -40,7 +40,7 @@ Servo door;                                        //motor object
 const int DebouceTime = 30;                       // button debouce time in ms
 
    //button objects
-Button SnoozeKey(Snooze_Pin, BUTTON_PULLUP_INTERNAL, true, DebouceTime);  
+Button CtrlKey(Ctrl_Pin, BUTTON_PULLUP_INTERNAL, true, DebouceTime);  
 Button LtKey(Lt_Pin, BUTTON_PULLUP_INTERNAL, true, DebouceTime);
 Button RtKey(Rt_Pin, BUTTON_PULLUP_INTERNAL, true, DebouceTime);
 
@@ -254,8 +254,8 @@ void setup() {
     LtKey.holdHandler(ButtonHold, Button_Hold_Time);
     RtKey.clickHandler(ButtonClick);
     RtKey.holdHandler(ButtonHold, Button_Hold_Time);
-    SnoozeKey.clickHandler(ButtonClick);
-    SnoozeKey.holdHandler(ButtonHold, Button_Hold_Time);
+    CtrlKey.clickHandler(ButtonClick);
+    CtrlKey.holdHandler(ButtonHold, Button_Hold_Time);
 
        //Display the clock
     displayClock(true);
@@ -369,7 +369,7 @@ void loop() {
    }
     LtKey.process();
     RtKey.process();
-    SnoozeKey.process();
+    CtrlKey.process();
     ActiveAlarms = CheckAlarmStatus();  //Returns which alarms are activated
 }
 
@@ -1297,7 +1297,7 @@ void ButtonClick(Button& b) {
         break;
         case ShowClock:
                 switch (b.pinValue()) {
-                    case Snooze_Pin: 
+                    case Ctrl_Pin: 
                         toggleShowAmtOfFood();               
                     break;               
                     case Lt_Pin:
@@ -1314,7 +1314,7 @@ void ButtonClick(Button& b) {
         case Feeding:
             //Alarm Mode
             switch (b.pinValue()) {
-            case Snooze_Pin:
+            case Ctrl_Pin:
                 Snooze();
                 ClockState = ShowClock;
                 break;
@@ -1331,7 +1331,7 @@ void ButtonClick(Button& b) {
         break;
         case EditClock:
             switch (b.pinValue()) {
-            case Snooze_Pin:
+            case Ctrl_Pin:
                 //Increments cursor position
                 cpIndex += 1;
                 cpIndex %= 4;
@@ -1386,7 +1386,7 @@ void ButtonClick(Button& b) {
         case EditFeedTime1:
             //Edit Alarm1 Mode
             switch (b.pinValue()) {
-            case Snooze_Pin:
+            case Ctrl_Pin:
                 //Increments cursor position
                 cpIndex += 1;
                 cpIndex %= 4;
@@ -1450,7 +1450,7 @@ void ButtonClick(Button& b) {
         case EditFeedTime2:
             //Edit Alarm2 Mode
             switch (b.pinValue()) {
-            case Snooze_Pin:
+            case Ctrl_Pin:
                 //Increments cursor position
                 cpIndex += 1;
                 cpIndex %= 4;
@@ -1512,7 +1512,7 @@ void ButtonClick(Button& b) {
         break;
         case EditFeedAmt:
               switch (b.pinValue()){
-                case Snooze_Pin:
+                case Ctrl_Pin:
                 break;
                 case Lt_Pin:    
                       changeFeedAmt(false);
@@ -1541,7 +1541,7 @@ void ButtonHold(Button& b) {
             break;
         case ShowClock:
             switch (b.pinValue()) {
-            case Snooze_Pin:
+            case Ctrl_Pin:
                 ClockState = EditClock;
                 cpIndex = 0;
                 buttonHoldPrevTime = millis();
@@ -1569,7 +1569,7 @@ void ButtonHold(Button& b) {
             break;
         case ShowFeedTime1:
             switch (b.pinValue()) {
-            case Snooze_Pin:
+            case Ctrl_Pin:
                 break;
             case Lt_Pin:
                 ClockState = EditFeedTime1;
@@ -1588,7 +1588,7 @@ void ButtonHold(Button& b) {
             break;
         case ShowFeedTime2:
             switch (b.pinValue()) {
-            case Snooze_Pin:
+            case Ctrl_Pin:
                 break;
             case Lt_Pin:
                 break;
@@ -1607,7 +1607,7 @@ void ButtonHold(Button& b) {
         case Feeding:
             //Alarm Mode
             switch (b.pinValue()) {
-            case Snooze_Pin:
+            case Ctrl_Pin:
                 Snooze();             //Snooze alarm for 9 minutes
                 ClockState = ShowClock;
                 buttonHoldPrevTime = millis();
@@ -1630,7 +1630,7 @@ void ButtonHold(Button& b) {
             break;
         case EditClock:  //Edit Clock
                   switch (b.pinValue()) {
-                      case Snooze_Pin:
+                      case Ctrl_Pin:
                           ClockState = EditFeedAmt;
                           cpIndex = 0;
                           buttonHoldPrevTime = millis();
@@ -1646,7 +1646,7 @@ void ButtonHold(Button& b) {
         break;
         case EditFeedAmt: 
             switch (b.pinValue()) {
-            case Snooze_Pin:
+            case Ctrl_Pin:
                 lcd.noBlink();
                 lcd.noCursor();
                 ClockState = ShowClock;
@@ -1662,7 +1662,7 @@ void ButtonHold(Button& b) {
             break;
         case EditFeedTime1:  //Edit Alarm1
             switch (b.pinValue()) {
-            case Snooze_Pin:
+            case Ctrl_Pin:
                 lcd.noBlink();
                 lcd.noCursor();
                 ClockState = ShowClock;
@@ -1679,7 +1679,7 @@ void ButtonHold(Button& b) {
             
         case EditFeedTime2:  //Edit Alarm1
             switch (b.pinValue()) {
-                case Snooze_Pin:
+                case Ctrl_Pin:
                     lcd.noBlink();
                     lcd.noCursor();
                     ClockState = ShowClock;
@@ -1749,26 +1749,21 @@ float getTemperatureValue() {
 }
 
 byte CheckAlarmStatus() {
-    bool AlarmStatus = digitalRead(SQW_Pin);
+    bool feedStatus = digitalRead(SQW_Pin);
     byte flaggedAlarms = Clock.flaggedAlarms();
 
-    if (AlarmStatus == LOW) {
+    if (feedStatus == LOW) {
         ClockState = Feeding;
     }
     return flaggedAlarms;
 }
 
 void lcdAlarmIndicator() {
-    byte alarmEnabledStatus;
+    byte feedEnabledStatus;
 
-    alarmEnabledStatus = Clock.alarmStatus();
-    /* Returns:
-       0 - No alarms
-       1 - Alarm 1 enabled
-       2 - Alarm 2 enabled
-       3 - Both alarms enabled
-     */
-    switch (alarmEnabledStatus) {
+    feedEnabledStatus = Clock.alarmStatus();
+   
+    switch (feedEnabledStatus) {
     case 0:
         //No alarms
         lcd.print("-");
