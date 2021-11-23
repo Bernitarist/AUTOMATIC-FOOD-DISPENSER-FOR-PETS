@@ -267,6 +267,15 @@ void setup() {
  * ********************************************************* */
 void loop() {
     static long previousMillis = 0;
+
+          //for debugging
+//    Serial.print("Pet weight ");
+//    Serial.print(pWeight.get_units(5),1);
+//    Serial.print(" grams");
+//    Serial.print("                  ");
+//    Serial.print("Feed weight ");
+//    Serial.print(scale.get_units(5),1);
+//    Serial.println(" grams");
     
     switch (ClockState) {
         case PowerLoss:
@@ -579,10 +588,10 @@ void displayAlarm(byte index = 1, bool changeFlag = false) {
         // First row
         lcd.setCursor(0, 0);
         if (index == alarm2) {
-            lcd.print("Alarm 2");
+            lcd.print("Feed2 at");
         }
         else {
-            lcd.print("Alarm 1");
+            lcd.print("Feed1 at");
         }
         lcd.setCursor(13, 0);
         if (alarm.Enabled == true) {
@@ -1264,8 +1273,16 @@ void showAmtOfFood(bool changeFlag = false){
 
         lcd.setCursor(0, 1);
         lcd.print("Feed Amt "); 
-        lcd.print(Amt2Digits(feedAmtRem));
-        lcd.print("g");
+        
+        if(counter == 0){
+          lcd.print(Amt2Digits(MaxAmtfood));
+          lcd.print("g");
+        }
+        else{
+          lcd.print(Amt2Digits(feedAmtRem));
+          lcd.print("g");
+        }
+        
 }
 
 void editFeedAmt(byte i = 0) {
@@ -1539,6 +1556,7 @@ void ButtonHold(Button& b) {
             bHoldButtonFlag = true;
             Clock.clearOSFStatus();
             break;
+            
         case ShowClock:
             switch (b.pinValue()) {
             case Ctrl_Pin:
@@ -1567,6 +1585,7 @@ void ButtonHold(Button& b) {
                 break;
             }
             break;
+            
         case ShowFeedTime1:
             switch (b.pinValue()) {
             case Ctrl_Pin:
@@ -1586,6 +1605,7 @@ void ButtonHold(Button& b) {
                 break;
             }
             break;
+            
         case ShowFeedTime2:
             switch (b.pinValue()) {
             case Ctrl_Pin:
@@ -1604,11 +1624,11 @@ void ButtonHold(Button& b) {
                 break;
             }
             break;
+            
         case Feeding:
-            //Alarm Mode
             switch (b.pinValue()) {
             case Ctrl_Pin:
-                Snooze();             //Snooze alarm for 9 minutes
+                Snooze();            
                 ClockState = ShowClock;
                 buttonHoldPrevTime = millis();
                 bHoldButtonFlag = true;
@@ -1616,7 +1636,6 @@ void ButtonHold(Button& b) {
                 break;
             case Lt_Pin:
             case Rt_Pin:
-                //turn off alarms
                 clearAlarms();
                 ClockState = ShowClock;
                 buttonHoldPrevTime = millis();
@@ -1628,22 +1647,24 @@ void ButtonHold(Button& b) {
                 break;
             }
             break;
-        case EditClock:  //Edit Clock
-                  switch (b.pinValue()) {
-                      case Ctrl_Pin:
-                          ClockState = EditFeedAmt;
-                          cpIndex = 0;
-                          buttonHoldPrevTime = millis();
-                          bHoldButtonFlag = true;
-                          foodParam(true);
-                      break;
-                      case Lt_Pin:                      
-                      case Rt_Pin:                 
-                      default:
-                      break;
+            
+        case EditClock:  
+               switch (b.pinValue()) {
+                   case Ctrl_Pin:
+                        ClockState = EditFeedAmt;
+                        cpIndex = 0;
+                        buttonHoldPrevTime = millis();
+                        bHoldButtonFlag = true;
+                        foodParam(true);
+                   break;
+                   case Lt_Pin:                      
+                   case Rt_Pin:                 
+                   default:
+                   break;
             }
               
         break;
+        
         case EditFeedAmt: 
             switch (b.pinValue()) {
             case Ctrl_Pin:
@@ -1660,7 +1681,8 @@ void ButtonHold(Button& b) {
                 break;
             }
             break;
-        case EditFeedTime1:  //Edit Alarm1
+            
+        case EditFeedTime1:  
             switch (b.pinValue()) {
             case Ctrl_Pin:
                 lcd.noBlink();
@@ -1677,7 +1699,7 @@ void ButtonHold(Button& b) {
             }
             break;
             
-        case EditFeedTime2:  //Edit Alarm1
+        case EditFeedTime2: 
             switch (b.pinValue()) {
                 case Ctrl_Pin:
                     lcd.noBlink();
@@ -1694,7 +1716,7 @@ void ButtonHold(Button& b) {
                 }
             break;
         default:
-            //todo
+            //do nothing
         break;
         }
     }
