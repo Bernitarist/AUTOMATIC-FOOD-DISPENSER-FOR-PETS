@@ -4,18 +4,19 @@
   
 #include <SimpleAlarmClock.h>         
 #include <LiquidCrystal_I2C.h>
+#include <SoftwareSerial.h>
 #include <Button.h>
 #include <Servo.h>   
 #include "HX711.h"                 
 #include "pitches.h"
 
-#define calibFacPet 216.0 
+#define calibFacPet 220.0 
 #define doutPet 6
 #define clkPet 5
 
-#define calibFacPlate 218.5 
+#define calibFacPlate 222.0 
 #define doutPlate 4
-#define clkPlate 3
+#define clkPlate 23
 
   /* ***********************************************************
    *                      Global Constants                     *
@@ -29,11 +30,12 @@ const bool INTCN = true;       // allows SQW pin to be monitored
    //pin configurations
 const int Ctrl_Pin = 11;
 const int Lt_Pin = 9;           
-const int Rt_Pin = 10;
+const int Rt_Pin = 22;
 const int doorPin = 12;
      
-SimpleAlarmClock Clock(RTC_addr, EEPROM_addr, INTCN);  // SimpleAlarmClock object
-LiquidCrystal_I2C lcd(0x27, 16, 2);                   // LCD object
+SimpleAlarmClock Clock(RTC_addr, EEPROM_addr, INTCN);   // SimpleAlarmClock object
+LiquidCrystal_I2C lcd(0x27, 16, 2);                    // LCD object
+SoftwareSerial esp(10,3);                             // tx,and rx of esp
 HX711 scale;                                         // Plate-load cell object
 HX711 pWeight;                                      //Pet-load cell object
 Servo door;                                        //motor object
@@ -78,7 +80,6 @@ const byte alarm2 = 2;
  * ********************************************************* */
  
 int melody[] = { NOTE_C6, NOTE_C6, NOTE_C6, NOTE_C6, NOTE_C6,};  // notes in the melody:
-
 int noteDurations[] = { 16, 16, 16, 16, 16 };                  // note durations: 4 = quarter note, 8 = eighth note, etc.
 
 enum States {
@@ -88,6 +89,7 @@ enum States {
     ShowFeedTime2,
     ShowFeedAmt,
     Feeding,
+    Posting,
     DoorOpening,
     EditClock,
     EditFeedTime1,
@@ -117,6 +119,16 @@ int minAngle = 0;     //min angle for door
 int maxAngle = 180;  //max angle for door
 int foodAmt = 5000;
 
+String ssid= "Bernito";
+String password= "shukisha16";
+String petWeight;          //to store the pet weight for database
+String feedWeight;        //to store the feed weight for database
+String data;             //to store the full weight for database
+
+String SERVER = "192.168.43.64";
+String PORT = "80";
+String URI= "http://192.168.43.64/berni/sqldata.php";  //ip adress of computer/folder/php file
+
 unsigned int MaxAmtfood;                     //used to track food remaining
 unsigned int feedAmtRem;                    //food remaining
 unsigned int counter = 0;                  //used to track the amount of food
@@ -128,7 +140,7 @@ DateTime PreviousTime;     // Maybe move as static variable under displayClock f
 AlarmTime PreviousAlarm;  // Maybe move as static variable under displayAlarm function
 
    //custom LCD characters
-byte cA1[8] = {
+byte up[8] = {
               0b00100,
               0b01110,
               0b11111,  //Up arrow
@@ -137,7 +149,7 @@ byte cA1[8] = {
               0b00000,
               0b00000,
               0b00000 };
-byte cA2[8] = {
+byte down[8] = {
               0b00000,
               0b00000,
               0b00000,  //Down arrow
@@ -146,7 +158,7 @@ byte cA2[8] = {
               0b11111,
               0b01110,
               0b00100 };
-byte cBA[8] = {
+byte both[8] = {
               0b00100,
               0b01110,
               0b11111,  //Both arrows
@@ -198,6 +210,9 @@ byte cBA[8] = {
  void ButtonHold(Button& b); 
  void lcdAlarmIndicator();
  void welcome();
+ void connectwifi();
+ void postingData();
+ void httppost();
  void checkAnimal();
 
 /* ***********************************************************
@@ -205,9 +220,11 @@ byte cBA[8] = {
  * ********************************************************* */
 void setup() {
        
-   RunTime = millis();  // Get the start time
+   RunTime = millis();      // Get the start time
 
-   Serial.begin(9600);  //for debugging
+   Serial.begin(115200);  //for debugging
+   esp.begin(115200);
+   
 
       // Pin Modes 
    pinMode(LED_Pin, OUTPUT);
@@ -224,11 +241,12 @@ void setup() {
    welcome();
    delay(4000);
    lcd.clear();
+   connectwifi();
     
       //Create custom lcd characters
-   lcd.createChar(1, cA1);
-   lcd.createChar(2, cA2);
-   lcd.createChar(3, cBA);
+   lcd.createChar(1, up);
+   lcd.createChar(2, down);
+   lcd.createChar(3, both);
     
       //Clock Stuff
    Clock.begin();
@@ -271,7 +289,7 @@ void loop() {
           //for debugging
 //    Serial.print("Pet weight ");
 //    Serial.print(pWeight.get_units(5),1);
-//    Serial.print(" grams");
+//    Serial.println(" grams");
 //    Serial.print("                  ");
 //    Serial.print("Feed weight ");
 //    Serial.print(scale.get_units(5),1);
@@ -296,6 +314,10 @@ void loop() {
         
         case ShowClock:
             displayClock();
+        break;
+
+        case Posting:
+            postingData();
         break;
         
         case ShowFeedTime1:              
@@ -386,6 +408,29 @@ void loop() {
  *                         Functions                         *
  * ********************************************************* */
 
+void connectwifi(){
+
+  lcd.clear();
+  lcd.setCursor(0, 0);                     
+  lcd.print("Connecting...");
+  String cmd="AT+CWJAP=\""+ ssid +"\",\""+ password +"\"";
+  esp.println(cmd);
+  
+  if (esp.find("OK")){
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Connected!");
+    ClockState = ShowClock;
+    }
+  else{
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("cannot connect");
+    connectwifi();
+    
+    }
+}
+   
 void displayClock(bool changeFlag = false) {
     /* ***************************************************** *
          changeFlag - true forces display refresh
@@ -499,7 +544,7 @@ void DisplayNextFeed(){
           
           //time difference calculation
    if((NowTime.ClockMode == AMhr && clockHr > alm1.hours) || (NowTime.ClockMode == AMhr && clockHr == alm1.hours && clockMin > alm1.minutes) || (NowTime.ClockMode == PMhr && clockHr < alm2.hours) 
-          || (clockHr == alm2.hours && NowTime.ClockMode == PMhr && clockMin < alm2.minutes) ||(NowTime.ClockMode == PMhr && clockHr == 12)){
+          || (clockHr == alm2.hours && NowTime.ClockMode == PMhr && clockMin < alm2.minutes) ||(NowTime.ClockMode == PMhr && clockHr == 12) ){
             
               if(alm2.minutes < clockMin){
                 --alm2.hours;
@@ -575,13 +620,13 @@ void displayAlarm(byte index = 1, bool changeFlag = false) {
         alarm = Clock.readAlarm(alarm1);      // get the latest alarm1 values
     }
 
-    // Check for Alarm change
+       // Check for Alarm change
     if (alarm.Hour != PreviousAlarm.Hour) { changeFlag = true; }
     if (alarm.Minute != PreviousAlarm.Minute) { changeFlag = true; }
     if (alarm.ClockMode != PreviousAlarm.ClockMode) { changeFlag = true; }
     if (alarm.AlarmMode != PreviousAlarm.AlarmMode) { changeFlag = true; }
 
-    //Update Display - Only change display if change is detected
+       //Update Display - Only change display if change is detected
     if (changeFlag == true) {
         lcd.clear();
 
@@ -601,22 +646,19 @@ void displayAlarm(byte index = 1, bool changeFlag = false) {
             lcd.print("OFF");
         }
 
-        //Second row
+           //Second row
         lcd.setCursor(0, 1);
         lcd.print(p2Digits(alarm.Hour));
         lcd.print(":");
         lcd.print(p2Digits(alarm.Minute));
         switch (alarm.ClockMode) {
         case AMhr:
-            //AM
             lcd.print(" AM");
             break;
         case PMhr:
-            //PM
             lcd.print(" PM");
             break;
         case M24hr:
-            //24hr
             lcd.print("  M");
             break;
         default:
@@ -626,23 +668,18 @@ void displayAlarm(byte index = 1, bool changeFlag = false) {
         switch (alarm.AlarmMode) {
             //0=Daily, 1=Weekday, 2=Weekend, 3=Once
         case 0:
-            //Daily
             lcd.print(" Daily");
             break;
         case 1:
-            //Weekday
             lcd.print(" Weekday");
             break;
         case 2:
-            //Weekend
             lcd.print(" Weekend");
             break;
         case 3:
-            //Once
             lcd.print(" Once");
             break;
         default:
-            //do nothing
             break;
         }
         PreviousAlarm = alarm;
@@ -708,7 +745,6 @@ void changeHour(byte i = clock0, bool increment = true) {
             Hour %= 24;
         }
         if (Hour < 0) { Hour = 23; }
-        //Serial.print("24Hour = ");Serial.println(Hour);
         break;
     default:
         //do nothing
@@ -721,10 +757,7 @@ void changeHour(byte i = clock0, bool increment = true) {
         Clock.write(NowTime);
         break;
     case alarm1:
-        //alarm1
-        Serial.println("Setting Alarm1");
         alarm.Hour = byte(Hour);
-        Serial.print("alarm.Hour = "); Serial.println(alarm.Hour);
         Clock.setAlarm(alarm, 1);
         break;
     case alarm2:
@@ -1101,16 +1134,20 @@ void openDoor(){
         counter++;
       }
         if (plateEmpty == true){
-            if((pWeight.get_units(5)) > 1 && (pWeight.get_units(5)) <= 40){
+            if((pWeight.get_units(5)) > 1 && (pWeight.get_units(5)) <= 100){
+               petWeight = String(pWeight.get_units(5));
                closeDoor(0);
             }
-            if((pWeight.get_units(5)) > 40 && (pWeight.get_units(5)) <= 80){
+            if((pWeight.get_units(5)) > 100 && (pWeight.get_units(5)) <= 250){
+               petWeight = String(pWeight.get_units(5));
                closeDoor(1);
             }
-            if((pWeight.get_units(5)) > 80 && (pWeight.get_units(5)) <= 130){
+            if((pWeight.get_units(5)) > 250 && (pWeight.get_units(5)) <= 350){
+              petWeight = String(pWeight.get_units(5));
               closeDoor(2);
             }
-            if((pWeight.get_units(5)) > 130 && (pWeight.get_units(5)) <= 210){
+            if((pWeight.get_units(5)) > 350 && (pWeight.get_units(5)) <= 500){
+              petWeight = String(pWeight.get_units(5));
               closeDoor(3);
             }
         }
@@ -1118,7 +1155,7 @@ void openDoor(){
 
 void closeDoor(int animalWeight){
 
-int tracker;
+int tracker;  //to track amount of food remaining
 
   switch (animalWeight){
       case 0:
@@ -1130,45 +1167,49 @@ int tracker;
            door.write(maxAngle);
          }
             tracker = feedTracker(scale.get_units(5));
+            feedWeight = String(scale.get_units(5));
             door.write(minAngle);
             animalPresent = false;
-            ClockState = ShowClock;
+            ClockState = Posting;
       break;
       case 1:
-           while((scale.get_units(5)) <= 260){
+           while((scale.get_units(5)) <= 280){
             lcd.setCursor(0,1);
             lcd.print(Amt2Digits(scale.get_units(5)));
             lcd.print(" g");
             door.write(maxAngle);
          }  
            tracker = feedTracker(scale.get_units(5));
+           feedWeight = String(scale.get_units(5));
             door.write(minAngle);
             animalPresent = false;
-            ClockState = ShowClock;
+           ClockState = Posting;
       break;
       case 2:
-          while((scale.get_units(5)) <= 445){
+          while((scale.get_units(5)) <= 420){
             lcd.setCursor(0,1);
             lcd.print(Amt2Digits(scale.get_units(5)));
             lcd.print(" g");
            door.write(maxAngle);
          }
            tracker = feedTracker(scale.get_units(5));
+           feedWeight = String(scale.get_units(5));
             door.write(minAngle);
             animalPresent = false;
-            ClockState = ShowClock;
+           ClockState = Posting;
       break;
       case 3:
-          while((scale.get_units(5)) <= 575){
+          while((scale.get_units(5)) <= 570){
             lcd.setCursor(0,1);
             lcd.print(Amt2Digits(scale.get_units(5)));
             lcd.print(" g");
            door.write(maxAngle);
          }
             tracker = feedTracker(scale.get_units(5));
+            feedWeight = String(scale.get_units(5));
             door.write(minAngle);
             animalPresent = false;
-            ClockState = ShowClock;
+            ClockState = Posting;
       break;
       default:
       
@@ -1743,6 +1784,7 @@ String p2Digits(int numValue) {
 }
 
 String Amt2Digits(int numValue) {
+
     String str;
 
     if (numValue < 1000 && numValue >= 100) {
@@ -1931,10 +1973,6 @@ void welcome() {
 void checkAnimal(){
   
    if((pWeight.get_units(5)) > 30){
-
-    Serial.print("Pet weight ");
-    Serial.print(pWeight.get_units(5),1);
-    Serial.println(" grams");
     animalPresent = true;
     }
 
@@ -1944,3 +1982,74 @@ void checkAnimal(){
         }
 
 }
+
+void postingData(){
+
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Feeding...");
+   
+  data = "petWeight=" + petWeight + "&feedWeight=" + feedWeight;
+  httppost();
+  delay(6000);
+  
+}
+
+void httppost(){
+
+  String postrequest;
+
+  esp.println("AT+CIPSTART=\"TCP\",\""+SERVER +"\",80");// start a TCP connection
+ delay(2000);
+  if(esp.find("OK")){
+    lcd.clear();
+    lcd.setCursor(0,0);
+     lcd.print("TCP conn ready");   
+      }
+     delay(1000);  
+          postrequest=
+      "POST " + URI + " HTTP/1.0\r\n" +
+      
+      "Host: " + SERVER + "\r\n" +
+      
+      "Accept: *" + "/" + "*\r\n" +
+      
+      "Content-Length: " + data.length() + "\r\n" +
+      
+      "Content-Type: application/x-www-form-urlencoded\r\n" +
+      
+      "\r\n" + data;
+      String sendCmd = "AT+CIPSEND=";//determine the number of caracters to be sent.
+      esp.print(sendCmd);
+      esp.println(postrequest.length() );
+      delay (1000);
+
+//}
+
+if(esp.find(">")) {
+
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Sending..");
+
+  esp.print(postrequest);
+  delay(2000);
+  
+if( esp.find("SEND OK")) {
+  delay(2000);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Packet sent");
+
+while (esp.available()) {
+String tmpResp = esp.readString();
+
+  }
+  // close the connection
+
+esp.println("AT+CIPCLOSE");
+ClockState = ShowClock;
+
+          }
+      }
+   }
