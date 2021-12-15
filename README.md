@@ -1,12 +1,20 @@
 # AUTOMATIC FOOD DISPENSER FOR PETS
 
 ---
+
+<img src="Photos/main.jpg" width="200">
+
+---
+
 ## Table of Contents
 ---
  * [Abstract](https://github.com/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS#abstract)
  * [Hardware Components](https://github.com/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS#hardware-components)
  * [How it Works](https://github.com/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS#how-it-works)
    * [Flowchart](https://github.com/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS#flowchart)
+   * [Circuit Schematic]()
+   * [Breadboard Assembly]()
+   * [The Display]() 
  * [Contact](https://github.com/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS#contact)
  * [License](https://github.com/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS#license) <br><br>
 
@@ -29,7 +37,8 @@ Existing pet food-dispensers provide minimal adaptability, functionality and use
 | RTC DS3231                           | <img src="Photos/rtc.jpg" width="200">                                          |
 | Push Buttons (3 pcs)                 | <img src="Photos/push.jpg" width="200">                                         |
 
-<br><br>
+<br>
+
 ## [How it Works](#heading-3)
   
  * The owner will set the preferred feeding times
@@ -41,12 +50,33 @@ Existing pet food-dispensers provide minimal adaptability, functionality and use
 
    * ### Flowchart
      --- 
-    <img src="Photos/flowchart.png" width="400"> <br>
+    <img src="Photos/flowchart.png" width="400"> <br><br>
+   * ### Circuit Schematic
+     ---
+   * ### Breadboard Assembly
+     ---
+     <img src="Photos/cct2.jpg" width="300"> <br><br> 
+     <img src="Photos/cct1.jpg" width="300"> <br><br>
 
+   * ### The Display
+     ---
+     _A sample of the display showing the current time and time till the next feed_
+
+     <img src="Photos/next.jpg" width="300"> 
+
+     _A sample of the display showing the first feed time_
+
+     <img src="Photos/feed1.jpg" width="300">
+
+     _A sample of the display showing the second feed time_
+
+     <img src="Photos/feed2.jpg" width="300">
+     
 ## [Contact](#heading-3)
 
-> [Email](berniemukonesi@gmail.com "berniemukonesi@gmail.com") <br>
+> [Email](berniemukonesi@gmail.com "berniemukonesi@gmail.com") - berniemukonesi@gmail.com  <br>
 > [Phone](+254713187640 "+254 713187640") <br>
-> [LinkedIn](linkedin.com/in/bernice-mukonesi-a9410618a "linkedin.com/in/bernice-mukonesi-a9410618a") <br>
+> [LinkedIn](https://www.linkedin.com/in/bernice-mukonesi-a9410618a "linkedin.com/in/bernice-mukonesi-a9410618a") <br>
 
 ## [License](#heading-3)
+> This project is licensed under the MIT license. Feel free to edit and distribute this template as you like. <br><br> See [LICENSE](https://github.com/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS/blob/master/LICENSE "MIT") for more information.
