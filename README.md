@@ -9,8 +9,7 @@
 
  Existing pet food-dispensers provide minimal adaptability, functionality and user personalization, leading to overfeeding or underfeeding of the pets. This project aims at solving the problems faced by pet owners by allowing them to customize the time interval between feeding times. <br><br>The device will dispense food based on the pet's weight, thereby allowing the right amount of food for each pet. Feedback from the pet is also incorporated. The corresponding feed information is sent to a database to be accessed by the owner, allowing them to plan efficiently. 
 
-
-
+ <br> 
 
 ## [Hardware components](#heading-3)
 
@@ -24,6 +23,7 @@
 | RTC DS3231                           | <img src="Photos/rtc.jpg" width="200">                                          |
 | Push Buttons (3 pcs)                 | <img src="Photos/push.jpg" width="200">                                         |
 
+<br><br>
 ## [How it Works (Flowcharts)](#heading-3)
   
  * The owner will set the preferred feeding times
