@@ -13,29 +13,29 @@
 ## [Hardware components](#heading-3)
 
    1. Liquid Crystal Display / LCD Adapter
- 
-![](photos/lcd1.jpg)  <img src="Photos/lcd2.png" width="300">
+
+<img src="Photos/lcd1.jpg" width="300">  <img src="Photos/lcd2.png" width="300">
 
    2. ESP8266-01 
 
-<img src="photos/esp.jpg" width="200"> 
+<img src="Photos/esp.jpg" width="200"> 
 
   3. Servo motor SG90
  
-<img src="photos/servo.jpg" width="200"> 
+<img src="Photos/servo.jpg" width="200"> 
 
   4. Arduino Mega 2560
   
-<img src="photos/mega.jpg" width="250"> 
+<img src="Photos/mega.jpg" width="250"> 
 
   5. Load Cell / HX711 (2 pcs)
  
-<img src="photos/loadcell.jpg" width="250"> 
+<img src="Photos/loadcell.jpg" width="250"> 
 
   6. RTC DS3231
   
-<img src="photos/rtc.jpg" width="200"> 
+<img src="Photos/rtc.jpg" width="200"> 
 
   7. Push Buttons (3 pcs) 
 
-<img src="photos/push.jpg" width="200"> 
+<img src="Photos/push.jpg" width="200"> 
