@@ -44,6 +44,13 @@
 
 ## [How it Works (Flowcharts)](#heading-3)
   
-   * Main working
-   
-<img src="Photos/flowchart.png" width="300"> 
+ * The owner will set the preferred feeding times
+ * On arrival of the specified time the buzzer will be triggered as an alert to the pet
+ * Detection of the pet occurs by measuring its weight 
+ * The buzzer goes off and the feeder-door opened to release the corresponding food amount, based on the pet's weight
+ * The feeder door is closed and the device starts over
+ * The pet's weight and the food consumed is sent to a database for monitoring
+
+   * **Main Flowchart** 
+ ---
+<img src="Photos/flowchart.png" width="250"> 
