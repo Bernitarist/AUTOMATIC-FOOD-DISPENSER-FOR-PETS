@@ -55,7 +55,7 @@ Existing pet food-dispensers provide minimal adaptability, functionality and use
      ---
    * ### Breadboard Assembly
      ---
-     <img src="Photos/cct2.jpg" width="300"> <br><br> 
+     <img src="Photos/cct2.jpg" width="200"> <br><br> 
      <img src="Photos/cct1.jpg" width="300"> <br><br>
 
    * ### The Display
