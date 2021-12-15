@@ -1,4 +1,4 @@
-# AUTOMATIC-FOOD-DISPENSER-FOR-PETS
+# AUTOMATIC FOOD DISPENSER FOR PETS
 
 ---
 ## Table of Contents
@@ -7,13 +7,13 @@
 
 ## [Abstract](#heading-3)
 
- Existing pet food-dispensers provide minimal adaptability, functionality and user personalization, leading to overfeeding or underfeeding of the pets. This project aims at solving the problems faced by pet owners by allowing them to customize the time interval between feeding times. <br><br>The device will dispense food based on the pet's weight, thereby allowing the right amount of food for each pet. Feedback from the pet is also incorporated. The corresponding feed information is sent to a database to be accessed by the owner, allowing them to plan efficiently. 
+Existing pet food-dispensers provide minimal adaptability, functionality and user personalization, leading to overfeeding or underfeeding of the pets. This project aims at solving the problems faced by pet owners by allowing them to customize the time interval between feeding times. <br><br>The device will dispense food based on the pet's weight, thereby allowing the right amount of food for each pet. Feedback from the pet is also incorporated. The corresponding feed information is sent to a database to be accessed by the owner, allowing them to plan efficiently. 
 
  <br> 
 
 ## [Hardware components](#heading-3)
 
-| **Component**                            |      **Photo**                                                              |
+| **Component**                        | **Photo**                                                                       |
 | ------------------------------------ | ------------------------------------------------------------------------------- |
 | Liquid Crystal Display / LCD adapter | <img src="Photos/lcd1.jpg" width="300"> <img src="Photos/lcd2.png" width="350"> |
 | ESP 8266-01                          | <img src="Photos/esp.jpg" width="200">                                          |
@@ -24,7 +24,7 @@
 | Push Buttons (3 pcs)                 | <img src="Photos/push.jpg" width="200">                                         |
 
 <br><br>
-## [How it Works (Flowcharts)](#heading-3)
+## [How it Works](#heading-3)
   
  * The owner will set the preferred feeding times
  * On arrival of the specified time the buzzer will be triggered as an alert to the pet
@@ -33,9 +33,14 @@
  * The feeder door is closed and the device starts over
  * The pet's weight and the food consumed is sent to a database for monitoring <br><br>
 
-   * ### Main Flowchart
+   * ### Flowchart
      --- 
-    <img src="Photos/flowchart.png" width="400"> <br><br>
+    <img src="Photos/flowchart.png" width="400"> <br>
 
-    * ### LCD Flowchart 
-      ---
+## [Contact](#heading-3)
+
+> [Email](berniemukonesi@gmail.com "berniemukonesi@gmail.com") <br>
+> [Phone](+254713187640 "+254 713187640") <br>
+> [LinkedIn](linkedin.com/in/bernice-mukonesi-a9410618a "linkedin.com/in/bernice-mukonesi-a9410618a") <br>
+
+## [License](#heading-3)
