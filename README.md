@@ -69,7 +69,7 @@ Existing pet food-dispensers provide minimal adaptability, functionality and use
 
      _A sample of the display showing the second feed time_
 
-     <img src="Photos/feed2.jpg" width="500"><br>
+     <img src="Photos/feed2.jpg" width="500"><br><br>
     
    * ### **Brief Code Explanation**
      ---
