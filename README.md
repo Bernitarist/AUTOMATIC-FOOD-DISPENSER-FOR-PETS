@@ -53,4 +53,4 @@
 
    * **Main Flowchart** 
  ---
-<img src="Photos/flowchart.png" width="250"> 
+<img src="Photos/flowchart.png" width="300"> 
