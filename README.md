@@ -14,7 +14,7 @@
 
    1. Liquid Crystal Display / LCD Adapter
  
-![](photos/lcd1.jpg)  <img src="photos/lcd2.png" width="300">
+![](photos/lcd1.jpg)  <img src="Photos/lcd2.png" width="300">
 
    2. ESP8266-01 
 
