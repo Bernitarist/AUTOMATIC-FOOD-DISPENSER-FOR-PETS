@@ -1,10 +1,9 @@
 # AUTOMATIC FOOD DISPENSER FOR PETS
 
+![GitHub repo size](https://img.shields.io/github/repo-size/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS?color=%2300ff000&logo=Github&style=flat-square)
 ---
 
 <img src="Photos/main.jpg" width="200"> <br>
-
-![GitHub repo size](https://img.shields.io/github/repo-size/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS?color=%2300ff000&logo=Github&style=plastic)
 
 ---
 
