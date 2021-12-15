@@ -1,6 +1,8 @@
 # AUTOMATIC-FOOD-DISPENSER-FOR-PETS
 
+---
 ## Table of Contents
+---
 
 
 ## [Abstract](#heading-3)
@@ -38,4 +40,6 @@
 
   7. Push Buttons (3 pcs) 
 
-<img src="Photos/push.jpg" width="200"> 
+<img src="Photos/push.jpg" width="200"> <br>
+
+## [How it Works](#heading-3)
