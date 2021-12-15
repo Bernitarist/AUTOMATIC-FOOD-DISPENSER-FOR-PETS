@@ -51,6 +51,6 @@
  * The feeder door is closed and the device starts over
  * The pet's weight and the food consumed is sent to a database for monitoring
 
-   * **Main Flowchart** 
+   * ### Main Flowchart 
  ---
 <img src="Photos/flowchart.png" width="300"> 
