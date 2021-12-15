@@ -7,7 +7,7 @@
 
 ## [Abstract](#heading-3)
 
- Existing pet food-dispensers provide minimal adaptability, functionality and user personalization, leading to overfeeding or underfeeding of the pets. This project aims at solving the problems faced by pet owners by allowing them to customize the time interval between feeding times. The device will dispense food based on the pet's weight, thereby allowing the right amount of food for each pet. Feedback from the pet is also incorporated. The corresponding feed information is sent to a database to be accessed by the owner, allowing them to plan efficiently. 
+ Existing pet food-dispensers provide minimal adaptability, functionality and user personalization, leading to overfeeding or underfeeding of the pets. This project aims at solving the problems faced by pet owners by allowing them to customize the time interval between feeding times. <br><br>The device will dispense food based on the pet's weight, thereby allowing the right amount of food for each pet. Feedback from the pet is also incorporated. The corresponding feed information is sent to a database to be accessed by the owner, allowing them to plan efficiently. 
 
 
 
@@ -40,6 +40,10 @@
 
   7. Push Buttons (3 pcs) 
 
-<img src="Photos/push.jpg" width="200"> <br>
+<img src="Photos/push.jpg" width="200"> <br><br><br>
 
-## [How it Works](#heading-3)
+## [How it Works (Flowcharts)](#heading-3)
+  
+   * Main working
+   
+<img src="Photos/flowchart.png" width="300"> 
