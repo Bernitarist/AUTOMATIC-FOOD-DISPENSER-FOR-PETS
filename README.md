@@ -54,6 +54,7 @@ Existing pet food-dispensers provide minimal adaptability, functionality and use
 
    * ### **Circuit Schematic**
      ---
+     <img src="Photos/schematic.png" width="800"> <br><br> 
 
    * ### **Breadboard Assembly**
      ---
