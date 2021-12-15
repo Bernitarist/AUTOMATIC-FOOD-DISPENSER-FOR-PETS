@@ -43,15 +43,18 @@ Existing pet food-dispensers provide minimal adaptability, functionality and use
  * The owner will set the preferred feeding times
  * On arrival of the specified time the buzzer will be triggered as an alert to the pet
  * Detection of the pet occurs by measuring its weight 
- * The buzzer goes off and the feeder-door opened to release the corresponding food amount, based on the pet's weight
+ * The buzzer goes off and the feeder-door is opened to release the corresponding food amount; based on the pet's weight
  * The feeder door is closed and the device starts over
  * The pet's weight and the food consumed is sent to a database for monitoring <br><br>
 
    * ### **Flowchart**
-     --- 
+     ---
+
     <img src="Photos/flowchart.png" width="400"> <br><br>
+
    * ### **Circuit Schematic**
      ---
+
    * ### **Breadboard Assembly**
      ---
      <img src="Photos/cct2.jpg" width="200"> <br><br> 
@@ -75,7 +78,8 @@ Existing pet food-dispensers provide minimal adaptability, functionality and use
      ---
 
 ## [License](#heading-3)
-> This project is licensed under the MIT license. Feel free to edit and distribute this template as you like. <br><br> See [LICENSE](https://github.com/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS/blob/master/LICENSE "MIT") for more information.    
+
+This project is licensed under the MIT license. Feel free to edit and distribute this template as you like. <br><br> See [LICENSE](https://github.com/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS/blob/master/LICENSE "MIT") for more information.    
 
 ## [Contact](#heading-3)
 
