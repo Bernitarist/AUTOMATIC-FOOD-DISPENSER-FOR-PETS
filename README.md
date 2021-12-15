@@ -118,8 +118,8 @@ Existing pet food-dispensers provide minimal adaptability, functionality and use
                    }
 
                 if(animalPresent == true){
-                     Snooze();  //stop the buzzer
-                     ClockState = DoorOpening;  //open feeder dorr
+                     Snooze();                   //stop the buzzer
+                     ClockState = DoorOpening;  //open feeder door
                     }
 
                 }          
@@ -232,7 +232,7 @@ Existing pet food-dispensers provide minimal adaptability, functionality and use
                  }
              }
         ```
-    * Once feeding is done, the corresponding information is sent to a database. This will enable the pet owner to plan efficiently for future pet needs. Below is the function responsible for this:
+   * Once feeding is done, the corresponding information is sent to a database. This will enable the pet owner to plan efficiently for future pet needs. Below is the function responsible for this:
         
         ```c++
             void httppost(){
@@ -284,6 +284,8 @@ Existing pet food-dispensers provide minimal adaptability, functionality and use
                                        }
                                       }
         ```
+
+Click [this](https://github.com/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS/tree/master/Code "Full Code") link to view the full code.
 
 ## [License](#heading-3)
 
