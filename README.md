@@ -15,14 +15,13 @@
    * [Circuit Schematic](https://github.com/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS#circuit-schematic)
    * [Breadboard Assembly](https://github.com/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS#breadboard-assembly)
    * [The Display](https://github.com/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS#the-display) 
- * [Contact](https://github.com/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS#contact)
- * [License](https://github.com/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS#license) <br><br>
-
+   * [Brief Code Explanation](https://github.com/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS#brief-code-explanation)
+ * [License](https://github.com/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS#license) 
+ * [Contact](https://github.com/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS#contact)<br><br>
 
 ## [Abstract](#heading-3)
 
 Existing pet food-dispensers provide minimal adaptability, functionality and user personalization, leading to overfeeding or underfeeding of the pets. This project aims at solving the problems faced by pet owners by allowing them to customize the time interval between feeding times. <br><br>The device will dispense food based on the pet's weight, thereby allowing the right amount of food for each pet. Feedback from the pet is also incorporated. The corresponding feed information is sent to a database to be accessed by the owner, allowing them to plan efficiently. 
-
  <br> 
 
 ## [Hardware components](#heading-3)
@@ -48,17 +47,17 @@ Existing pet food-dispensers provide minimal adaptability, functionality and use
  * The feeder door is closed and the device starts over
  * The pet's weight and the food consumed is sent to a database for monitoring <br><br>
 
-   * ### Flowchart
+   * ### **Flowchart**
      --- 
     <img src="Photos/flowchart.png" width="400"> <br><br>
-   * ### Circuit Schematic
+   * ### **Circuit Schematic**
      ---
-   * ### Breadboard Assembly
+   * ### **Breadboard Assembly**
      ---
      <img src="Photos/cct2.jpg" width="200"> <br><br> 
      <img src="Photos/cct1.jpg" width="300"> <br><br>
 
-   * ### The Display
+   * ### **The Display**
      ---
      _A sample of the display showing the current time and time till the next feed_
 
@@ -70,13 +69,18 @@ Existing pet food-dispensers provide minimal adaptability, functionality and use
 
      _A sample of the display showing the second feed time_
 
-     <img src="Photos/feed2.jpg" width="500">
-     
+     <img src="Photos/feed2.jpg" width="500"><br>
+    
+   * ### **Brief Code Explanation**
+     ---
+
+## [License](#heading-3)
+> This project is licensed under the MIT license. Feel free to edit and distribute this template as you like. <br><br> See [LICENSE](https://github.com/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS/blob/master/LICENSE "MIT") for more information.    
+
 ## [Contact](#heading-3)
 
 > [Email](berniemukonesi@gmail.com "berniemukonesi@gmail.com") - berniemukonesi@gmail.com  <br>
 > [Phone](+254713187640 "+254 713187640") <br>
 > [LinkedIn](https://www.linkedin.com/in/bernice-mukonesi-a9410618a "linkedin.com/in/bernice-mukonesi-a9410618a") <br>
 
-## [License](#heading-3)
-> This project is licensed under the MIT license. Feel free to edit and distribute this template as you like. <br><br> See [LICENSE](https://github.com/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS/blob/master/LICENSE "MIT") for more information.
+
