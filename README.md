@@ -1,6 +1,6 @@
 # AUTOMATIC FOOD DISPENSER FOR PETS
 
-![GitHub](https://img.shields.io/github/license/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS?style=flat-square)
+![GitHub](https://img.shields.io/github/license/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS?color=%23003366&style=flat-square)
 ![GitHub repo size](https://img.shields.io/github/repo-size/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS?color=%23006600&logo=Github&style=flat-square)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS?color=%23990000&style=flat-square)
 ![GitHub forks](https://img.shields.io/github/forks/Bernitarist/AUTOMATIC-FOOD-DISPENSER-FOR-PETS?style=social)
