@@ -62,15 +62,15 @@ Existing pet food-dispensers provide minimal adaptability, functionality and use
      ---
      _A sample of the display showing the current time and time till the next feed_
 
-     <img src="Photos/next.jpg" width="300"> 
+     <img src="Photos/next.jpg" width="500"> 
 
      _A sample of the display showing the first feed time_
 
-     <img src="Photos/feed1.jpg" width="300">
+     <img src="Photos/feed1.jpg" width="500">
 
      _A sample of the display showing the second feed time_
 
-     <img src="Photos/feed2.jpg" width="300">
+     <img src="Photos/feed2.jpg" width="500">
      
 ## [Contact](#heading-3)
 
